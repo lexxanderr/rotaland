@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import './App.css'
 
-const API = 'http://localhost:5153'
+const API = 'http://172.20.10.4:5153'
 
 type Employee = {
   id: string
@@ -108,6 +108,10 @@ function getLocalTime(value: string) {
 
 function App() {
   const [page, setPage] = useState<'rota' | 'employees' | 'requests'>('rota')
+  const [selectedDayIndex, setSelectedDayIndex] = useState(() => {
+    const today = new Date().getDay()
+    return today === 0 ? 6 : today - 1
+  })
   const [weekStart, setWeekStart] = useState(getMonday(new Date()))
   const [rota, setRota] = useState<WeeklyRota | null>(null)
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -650,6 +654,15 @@ function App() {
       </aside>
 
       <main className="main">
+        <div className="mobileHeader">
+          <div className="mobileBrand">
+            <span className="logoMark">R</span>
+            <div>
+              <strong>RotaLand</strong>
+              <span>Hull Site · Operations</span>
+            </div>
+          </div>
+        </div>
         {page === 'rota' ? (
           <>
         <header className="topbar">
@@ -660,6 +673,7 @@ function App() {
 
           <button
             className="primaryButton"
+            aria-label="Add shift"
             onClick={openAddShift}
             disabled={activeEmployees.length === 0}
           >
@@ -746,71 +760,97 @@ function App() {
           {error && <div className="state error">{error}</div>}
 
           {!loading && !error && (
-            <div className="rotaGrid">
-              <div className="gridEmployeeHeader">EMPLOYEE</div>
+            <>
+              <div className="desktopRotaGrid rotaGrid">
+                <div className="gridEmployeeHeader">EMPLOYEE</div>
 
-              {days.map(day => (
-                <div
-                  className="gridDayHeader"
-                  key={day.toISOString()}
-                >
-                  {formatDay(day)}
-                </div>
-              ))}
-
-              {activeEmployees.map(employee => (
-                <div className="employeeRow" key={employee.id}>
-                  <div className="employee">
-                    <div className="avatar">
-                      {employee.firstName[0]}
-                      {employee.lastName[0]}
-                    </div>
-
-                    <div>
-                      <strong>
-                        {employee.firstName} {employee.lastName}
-                      </strong>
-                      <span>{employee.role}</span>
-                    </div>
+                {days.map(day => (
+                  <div className="gridDayHeader" key={day.toISOString()}>
+                    {formatDay(day)}
                   </div>
+                ))}
 
-                  {days.map(day => {
-                    const shift = shiftFor(employee.id, day)
+                {activeEmployees.map(employee => (
+                  <div className="employeeRow" key={employee.id}>
+                    <div className="employee">
+                      <div className="avatar">
+                        {employee.firstName[0]}{employee.lastName[0]}
+                      </div>
+                      <div>
+                        <strong>{employee.firstName} {employee.lastName}</strong>
+                        <span>{employee.role}</span>
+                      </div>
+                    </div>
 
+                    {days.map(day => {
+                      const shift = shiftFor(employee.id, day)
+                      return (
+                        <div className="shiftCell" key={day.toISOString()}>
+                          {shift ? (
+                            <button className="shift" onClick={() => openEditShift(shift)}>
+                              <strong>{formatTime(shift.startUtc)} – {formatTime(shift.endUtc)}</strong>
+                              <span>{shift.paidHours}h paid</span>
+                              <span className="shiftHint">Click to edit</span>
+                            </button>
+                          ) : (
+                            <span className="empty">—</span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mobileAgenda">
+                <div className="mobileDayStrip" aria-label="Choose rota day">
+                  {days.map((day, index) => (
+                    <button
+                      key={day.toISOString()}
+                      className={index === selectedDayIndex ? 'active' : ''}
+                      onClick={() => setSelectedDayIndex(index)}
+                    >
+                      <span>{day.toLocaleDateString('en-GB', { weekday: 'short' })}</span>
+                      <strong>{day.getDate()}</strong>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mobileAgendaHeader">
+                  <div>
+                    <span className="eyebrow">SCHEDULE</span>
+                    <h3>{days[selectedDayIndex].toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
+                  </div>
+                  <span className="mobileShiftCount">
+                    {activeEmployees.filter(e => shiftFor(e.id, days[selectedDayIndex])).length} shifts
+                  </span>
+                </div>
+
+                <div className="mobileAgendaList">
+                  {activeEmployees.map(employee => {
+                    const shift = shiftFor(employee.id, days[selectedDayIndex])
                     return (
-                      <div
-                        className="shiftCell"
-                        key={day.toISOString()}
-                      >
+                      <div className="mobileAgendaRow" key={employee.id}>
+                        <div className="avatar">{employee.firstName[0]}{employee.lastName[0]}</div>
+                        <div className="mobileAgendaPerson">
+                          <strong>{employee.firstName} {employee.lastName}</strong>
+                          <span>{employee.role}</span>
+                        </div>
                         {shift ? (
-                          <button
-                            className="shift"
-                            onClick={() => openEditShift(shift)}
-                          >
-                            <strong>
-                              {formatTime(shift.startUtc)} –{' '}
-                              {formatTime(shift.endUtc)}
-                            </strong>
-
-                            <span>
-                              {shift.paidHours}h paid
-                            </span>
-
-                            <span className="shiftHint">
-                              Click to edit
-                            </span>
+                          <button className="mobileShiftCard" onClick={() => openEditShift(shift)}>
+                            <strong>{formatTime(shift.startUtc)} – {formatTime(shift.endUtc)}</strong>
+                            <span>{shift.paidHours}h paid · tap to edit</span>
                           </button>
                         ) : (
-                          <span className="empty">—</span>
+                          <span className="mobileNoShift">No shift</span>
                         )}
                       </div>
                     )
                   })}
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
+              </div>
+            </>
+          )}        </section>
           </>
         ) : page === 'employees' ? (
           <>
@@ -974,21 +1014,14 @@ function App() {
 
                         <div>
                           <span>Status</span>
-                          <strong
-                            className={
-                              request.status === 'Approved'
-                                ? 'statusActive'
-                                : request.status === 'Rejected'
-                                  ? 'statusInactive'
-                                  : ''
-                            }
-                          >
+                          <span className={`statusPill status${request.status}`}>
+                            <span className="statusDot" />
                             {request.status}
-                          </strong>
+                          </span>
                         </div>
 
                         {request.status === 'Pending' && (
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <div className="requestActions">
                             <button
                               className="secondaryButton"
                               onClick={() => reviewRequest(request.id, 'approve')}
@@ -1016,6 +1049,31 @@ function App() {
           </>
         )}
       </main>
+
+      <nav className="mobileNav" aria-label="Mobile navigation">
+        <button
+          className={page === 'rota' ? 'active' : ''}
+          onClick={() => setPage('rota')}
+        >
+          <CalendarDays size={20} />
+          <span>Rota</span>
+        </button>
+        <button
+          className={page === 'employees' ? 'active' : ''}
+          onClick={() => setPage('employees')}
+        >
+          <Users size={20} />
+          <span>People</span>
+        </button>
+        <button
+          className={page === 'requests' ? 'active' : ''}
+          onClick={() => setPage('requests')}
+        >
+          <ClipboardList size={20} />
+          <span>Requests</span>
+          {pendingRequests > 0 && <b>{pendingRequests}</b>}
+        </button>
+      </nav>
 
       {showRequestModal && (
         <div
