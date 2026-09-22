@@ -62,5 +62,6 @@ app.MapGetEmployeesEndpoint();
 app.MapGetEmployeeEndpoint();
 app.MapUpdateEmployeeEndpoint();
 app.MapDeleteEmployeeEndpoint();
+app.MapReactivateEmployeeEndpoint();
 
 app.Run();

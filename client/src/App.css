@@ -537,3 +537,149 @@ h1 {
   background: #f9fafb;
   color: #667085;
 }
+
+.sidebar nav {
+  display: grid;
+  gap: 4px;
+}
+
+.sidebar .navItem {
+  width: 100%;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.employeePanel {
+  background: #fff;
+  border: 1px solid #eaecf0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.employeePanelHeader {
+  padding: 22px;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.employeePanelHeader h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.employeePanelHeader p {
+  margin: 0;
+  color: #667085;
+  font-size: 12px;
+}
+
+.employeeList {
+  display: grid;
+}
+
+.employeeListRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  padding: 18px 22px;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.employeeListRow:last-child {
+  border-bottom: 0;
+}
+
+.employeeListIdentity {
+  min-width: 240px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.employeeListIdentity > div:last-child {
+  display: grid;
+  gap: 3px;
+}
+
+.employeeListIdentity strong {
+  font-size: 13px;
+}
+
+.employeeListIdentity span {
+  color: #667085;
+  font-size: 11px;
+}
+
+.employeeMeta {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.employeeMeta > div {
+  display: grid;
+  gap: 4px;
+}
+
+.employeeMeta span {
+  color: #667085;
+  font-size: 10px;
+}
+
+.employeeMeta strong {
+  font-size: 12px;
+}
+
+.statusActive {
+  color: #027a48;
+}
+
+.statusInactive {
+  color: #667085;
+}
+
+@media (max-width: 900px) {
+  .employeeListRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .employeeMeta {
+    width: 100%;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.employeeListRow {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.employeeListRow:hover {
+  background: #f9fafb;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.modalActionsRight {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+
+@media (max-width: 600px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}

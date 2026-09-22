@@ -18,6 +18,7 @@ type Employee = {
   id: string
   firstName: string
   lastName: string
+  email: string
   role: string
   contractedHoursPerWeek: number
   departmentName: string
@@ -92,6 +93,7 @@ function getLocalTime(value: string) {
 }
 
 function App() {
+  const [page, setPage] = useState<'rota' | 'employees'>('rota')
   const [weekStart, setWeekStart] = useState(getMonday(new Date()))
   const [rota, setRota] = useState<WeeklyRota | null>(null)
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -110,6 +112,16 @@ function App() {
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState('17:00')
   const [breakMinutes, setBreakMinutes] = useState(30)
+
+  const [showEmployeeModal, setShowEmployeeModal] = useState(false)
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
+  const [employeeFirstName, setEmployeeFirstName] = useState('')
+  const [employeeLastName, setEmployeeLastName] = useState('')
+  const [employeeEmail, setEmployeeEmail] = useState('')
+  const [employeeRole, setEmployeeRole] = useState('Team Member')
+  const [employeeHours, setEmployeeHours] = useState(40)
+  const [employeeFormError, setEmployeeFormError] = useState('')
+  const [savingEmployee, setSavingEmployee] = useState(false)
 
   const days = useMemo(
     () =>
@@ -164,7 +176,7 @@ function App() {
 
       const shiftDate = new Date(shift.startUtc)
 
-      return (
+  return (
         shiftDate.getFullYear() === day.getFullYear() &&
         shiftDate.getMonth() === day.getMonth() &&
         shiftDate.getDate() === day.getDate()
@@ -253,11 +265,9 @@ function App() {
         },
         body: JSON.stringify({
           ...(editingShift ? {} : { employeeId }),
-          ...(editingShift ? {} : {}),
           startUtc,
           endUtc,
           breakMinutes: Number(breakMinutes),
-          ...(editingShift ? {} : { employeeId }),
         }),
       })
 
@@ -328,6 +338,161 @@ function App() {
     }
   }
 
+  function openAddEmployee() {
+    setEditingEmployee(null)
+    setEmployeeFirstName('')
+    setEmployeeLastName('')
+    setEmployeeEmail('')
+    setEmployeeRole('Team Member')
+    setEmployeeHours(40)
+    setEmployeeFormError('')
+    setShowEmployeeModal(true)
+  }
+
+  function openEditEmployee(employee: Employee) {
+    setEditingEmployee(employee)
+    setEmployeeFirstName(employee.firstName)
+    setEmployeeLastName(employee.lastName)
+    setEmployeeEmail(employee.email)
+    setEmployeeRole(employee.role)
+    setEmployeeHours(employee.contractedHoursPerWeek)
+    setEmployeeFormError('')
+    setShowEmployeeModal(true)
+  }
+
+  function closeEmployeeModal() {
+    if (savingEmployee) return
+    setShowEmployeeModal(false)
+    setEditingEmployee(null)
+    setEmployeeFormError('')
+  }
+
+  async function saveEmployee(event: React.FormEvent) {
+    event.preventDefault()
+    setEmployeeFormError('')
+
+    if (
+      !employeeFirstName.trim() ||
+      !employeeLastName.trim() ||
+      !employeeEmail.trim() ||
+      !employeeRole.trim()
+    ) {
+      setEmployeeFormError('Please complete all employee fields.')
+      return
+    }
+
+    try {
+      setSavingEmployee(true)
+
+      const response = await fetch(
+        editingEmployee
+          ? `${API}/api/employees/${editingEmployee.id}`
+          : `${API}/api/employees`,
+        {
+          method: editingEmployee ? 'PUT' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            firstName: employeeFirstName.trim(),
+            lastName: employeeLastName.trim(),
+            email: employeeEmail.trim(),
+            role: employeeRole.trim(),
+            contractedHoursPerWeek: Number(employeeHours),
+            departmentId: 'bccd62a9-0288-4d8d-9c00-1f3537c91eee',
+          }),
+        },
+      )
+
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message ??
+            `Could not ${editingEmployee ? 'update' : 'create'} employee.`,
+        )
+      }
+
+      setShowEmployeeModal(false)
+      setEditingEmployee(null)
+      await loadData()
+    } catch (err) {
+      setEmployeeFormError(
+        err instanceof Error ? err.message : 'Could not save employee.',
+      )
+    } finally {
+      setSavingEmployee(false)
+    }
+  }
+
+  async function deactivateEmployee() {
+    if (!editingEmployee || !editingEmployee.isActive) return
+
+    const confirmed = window.confirm(
+      `Deactivate ${editingEmployee.firstName} ${editingEmployee.lastName}?`,
+    )
+
+    if (!confirmed) return
+
+    try {
+      setSavingEmployee(true)
+      setEmployeeFormError('')
+
+      const response = await fetch(
+        `${API}/api/employees/${editingEmployee.id}`,
+        { method: 'DELETE' },
+      )
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.message ?? 'Could not deactivate employee.')
+      }
+
+      setShowEmployeeModal(false)
+      setEditingEmployee(null)
+      await loadData()
+    } catch (err) {
+      setEmployeeFormError(
+        err instanceof Error
+          ? err.message
+          : 'Could not deactivate employee.',
+      )
+    } finally {
+      setSavingEmployee(false)
+    }
+  }
+
+  async function reactivateEmployee() {
+    if (!editingEmployee || editingEmployee.isActive) return
+
+    try {
+      setSavingEmployee(true)
+      setEmployeeFormError('')
+
+      const response = await fetch(
+        `${API}/api/employees/${editingEmployee.id}/reactivate`,
+        { method: 'PUT' },
+      )
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.message ?? 'Could not reactivate employee.')
+      }
+
+      setShowEmployeeModal(false)
+      setEditingEmployee(null)
+      await loadData()
+    } catch (err) {
+      setEmployeeFormError(
+        err instanceof Error
+          ? err.message
+          : 'Could not reactivate employee.',
+      )
+    } finally {
+      setSavingEmployee(false)
+    }
+  }
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -337,15 +502,21 @@ function App() {
         </div>
 
         <nav>
-          <a className="navItem active">
+          <button
+            className={`navItem ${page === 'rota' ? 'active' : ''}`}
+            onClick={() => setPage('rota')}
+          >
             <CalendarDays size={18} />
             Rota
-          </a>
+          </button>
 
-          <a className="navItem">
+          <button
+            className={`navItem ${page === 'employees' ? 'active' : ''}`}
+            onClick={() => setPage('employees')}
+          >
             <Users size={18} />
             Employees
-          </a>
+          </button>
         </nav>
 
         <div className="sidebarBottom">
@@ -356,6 +527,8 @@ function App() {
       </aside>
 
       <main className="main">
+        {page === 'rota' ? (
+          <>
         <header className="topbar">
           <div>
             <div className="eyebrow">OPERATIONS</div>
@@ -515,7 +688,214 @@ function App() {
             </div>
           )}
         </section>
+          </>
+        ) : (
+          <>
+            <header className="topbar">
+              <div>
+                <div className="eyebrow">PEOPLE</div>
+                <h1>Employees</h1>
+              </div>
+
+              <button className="primaryButton" onClick={openAddEmployee}>
+                <Plus size={17} />
+                Add employee
+              </button>
+            </header>
+
+            <section className="employeePanel">
+              <div className="employeePanelHeader">
+                <div>
+                  <h2>Team</h2>
+                  <p>{activeEmployees.length} active employees</p>
+                </div>
+              </div>
+
+              <div className="employeeList">
+                {employees.map(employee => (
+                  <button
+                    className="employeeListRow"
+                    key={employee.id}
+                    onClick={() => openEditEmployee(employee)}
+                  >
+                    <div className="employeeListIdentity">
+                      <div className="avatar">
+                        {employee.firstName[0]}
+                        {employee.lastName[0]}
+                      </div>
+
+                      <div>
+                        <strong>
+                          {employee.firstName} {employee.lastName}
+                        </strong>
+                        <span>{employee.email}</span>
+                      </div>
+                    </div>
+
+                    <div className="employeeMeta">
+                      <div>
+                        <span>Role</span>
+                        <strong>{employee.role}</strong>
+                      </div>
+
+                      <div>
+                        <span>Department</span>
+                        <strong>{employee.departmentName}</strong>
+                      </div>
+
+                      <div>
+                        <span>Contract</span>
+                        <strong>
+                          {employee.contractedHoursPerWeek}h / week
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>Status</span>
+                        <strong
+                          className={
+                            employee.isActive
+                              ? 'statusActive'
+                              : 'statusInactive'
+                          }
+                        >
+                          {employee.isActive ? 'Active' : 'Inactive'}
+                        </strong>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
       </main>
+
+      {showEmployeeModal && (
+        <div
+          className="modalBackdrop"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget) {
+              closeEmployeeModal()
+            }
+          }}
+        >
+          <div className="modal">
+            <div className="modalHeader">
+              <div>
+                <div className="eyebrow">PEOPLE</div>
+                <h2>
+                  {editingEmployee ? 'Edit employee' : 'Add employee'}
+                </h2>
+              </div>
+
+              <button
+                className="closeButton"
+                onClick={closeEmployeeModal}
+              >
+                <X size={19} />
+              </button>
+            </div>
+
+            <form onSubmit={saveEmployee}>
+              <div className="formGrid">
+                <label>
+                  First name
+                  <input
+                    value={employeeFirstName}
+                    onChange={e => setEmployeeFirstName(e.target.value)}
+                  />
+                </label>
+
+                <label>
+                  Last name
+                  <input
+                    value={employeeLastName}
+                    onChange={e => setEmployeeLastName(e.target.value)}
+                  />
+                </label>
+              </div>
+
+              <label>
+                Email
+                <input
+                  type="email"
+                  value={employeeEmail}
+                  onChange={e => setEmployeeEmail(e.target.value)}
+                />
+              </label>
+
+              <label>
+                Role
+                <input
+                  value={employeeRole}
+                  onChange={e => setEmployeeRole(e.target.value)}
+                />
+              </label>
+
+              <label>
+                Contracted hours per week
+                <input
+                  type="number"
+                  min="0"
+                  max="168"
+                  value={employeeHours}
+                  onChange={e => setEmployeeHours(Number(e.target.value))}
+                />
+              </label>
+
+              {employeeFormError && (
+                <div className="formError">{employeeFormError}</div>
+              )}
+
+              <div className="modalActions">
+                {editingEmployee?.isActive ? (
+                  <button
+                    type="button"
+                    className="dangerButton"
+                    onClick={deactivateEmployee}
+                    disabled={savingEmployee}
+                  >
+                    Deactivate
+                  </button>
+                ) : editingEmployee ? (
+                  <button
+                    type="button"
+                    className="secondaryButton"
+                    onClick={reactivateEmployee}
+                    disabled={savingEmployee}
+                  >
+                    Reactivate
+                  </button>
+                ) : null}
+
+                <div className="modalActionsRight">
+                  <button
+                    type="button"
+                    className="secondaryButton"
+                    onClick={closeEmployeeModal}
+                    disabled={savingEmployee}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="primaryButton"
+                    disabled={savingEmployee}
+                  >
+                    {savingEmployee
+                      ? 'Saving...'
+                      : editingEmployee
+                        ? 'Save changes'
+                        : 'Add employee'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {showShiftModal && (
         <div
