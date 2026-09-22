@@ -21,5 +21,7 @@ public class RotaLandDbContext(DbContextOptions<RotaLandDbContext> options)
 
     public DbSet<Shift> Shifts => Set<Shift>();
 
+    public DbSet<RotaPublication> RotaPublications => Set<RotaPublication>();
+
     public DbSet<TimeOffRequest> TimeOffRequests => Set<TimeOffRequest>();
 }

@@ -1062,3 +1062,77 @@ button.employeeListRow:hover { background: #fafbfc; }
     font-weight: 650;
   }
 }
+
+/* Rota publication */
+.rotaHeaderActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rotaStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rotaStatus.draft {
+  background: #fff7e6;
+  color: #8a5a00;
+}
+
+.rotaStatus.published {
+  background: #eaf8ef;
+  color: #176b3a;
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.publishRotaButton {
+  min-height: 38px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 10px;
+  background: #111827;
+  color: white;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.publishRotaButton:hover {
+  opacity: 0.9;
+}
+
+.publishRotaButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .rotaHeaderActions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .publishRotaButton {
+    flex: 1;
+  }
+
+  .weekControls {
+    width: 100%;
+  }
+}

@@ -11,12 +11,17 @@ public static class GetWeeklyRotaEndpoint
             DateTime start,
             RotaLandDbContext db) =>
         {
-            var end = start.AddDays(7);
+            var weekStart = DateTime.SpecifyKind(start.Date, DateTimeKind.Utc);
+            var end = weekStart.AddDays(7);
+
+            var publication = await db.RotaPublications
+                .AsNoTracking()
+                .SingleOrDefaultAsync(r => r.WeekStartUtc == weekStart);
 
             var shifts = await db.Shifts
                 .AsNoTracking()
                 .Include(s => s.Employee)
-                .Where(s => s.StartUtc >= start && s.StartUtc < end && s.Employee.IsActive)
+                .Where(s => s.StartUtc >= weekStart && s.StartUtc < end && s.Employee.IsActive)
                 .OrderBy(s => s.StartUtc)
                 .ToListAsync();
 
@@ -33,8 +38,10 @@ public static class GetWeeklyRotaEndpoint
 
             return Results.Ok(new
             {
-                WeekStart = start,
+                WeekStart = weekStart,
                 WeekEnd = end,
+                Status = publication?.Status ?? "Draft",
+                PublishedAtUtc = publication?.PublishedAtUtc,
                 TotalScheduledHours = shifts.Sum(s => s.GetPaidHours()),
                 Shifts = shiftResults
             });

@@ -40,6 +40,8 @@ type Shift = {
 type WeeklyRota = {
   weekStart: string
   weekEnd: string
+  status: 'Draft' | 'Published'
+  publishedAtUtc: string | null
   totalScheduledHours: number
   shifts: Shift[]
 }
@@ -114,6 +116,7 @@ function App() {
   })
   const [weekStart, setWeekStart] = useState(getMonday(new Date()))
   const [rota, setRota] = useState<WeeklyRota | null>(null)
+  const [publishingRota, setPublishingRota] = useState(false)
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -193,6 +196,36 @@ function App() {
       )
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function publishRota() {
+    if (!rota || rota.status === 'Published') return
+
+    try {
+      setPublishingRota(true)
+      setError('')
+
+      const response = await fetch(
+        `${API}/api/rota/week/publish?start=${encodeURIComponent(
+          toApiDate(weekStart),
+        )}`,
+        { method: 'PUT' },
+      )
+
+      if (!response.ok) {
+        throw new Error('Could not publish this rota.')
+      }
+
+      await loadData()
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Could not publish this rota.',
+      )
+    } finally {
+      setPublishingRota(false)
     }
   }
 
@@ -740,18 +773,35 @@ function App() {
               </p>
             </div>
 
-            <div className="weekControls">
-              <button onClick={previousWeek}>
-                <ChevronLeft size={18} />
-              </button>
+            <div className="rotaHeaderActions">
+              <div className={`rotaStatus ${rota?.status === 'Published' ? 'published' : 'draft'}`}>
+                <span className="statusDot" />
+                {rota?.status ?? 'Draft'}
+              </div>
 
-              <button onClick={() => setWeekStart(getMonday(new Date()))}>
-                Today
-              </button>
+              {rota?.status !== 'Published' && (
+                <button
+                  className="publishRotaButton"
+                  onClick={publishRota}
+                  disabled={publishingRota || loading}
+                >
+                  {publishingRota ? 'Publishing…' : 'Publish rota'}
+                </button>
+              )}
 
-              <button onClick={nextWeek}>
-                <ChevronRight size={18} />
-              </button>
+              <div className="weekControls">
+                <button onClick={previousWeek}>
+                  <ChevronLeft size={18} />
+                </button>
+
+                <button onClick={() => setWeekStart(getMonday(new Date()))}>
+                  Today
+                </button>
+
+                <button onClick={nextWeek}>
+                  <ChevronRight size={18} />
+                </button>
+              </div>
             </div>
           </div>
 
