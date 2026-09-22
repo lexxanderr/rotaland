@@ -6,6 +6,22 @@ using RotaLand.Api.Services.Scheduling;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:5173",
+                "http://localhost:5174",
+                "http://localhost:5175"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
+
 builder.Services.AddOpenApi();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -18,6 +34,9 @@ builder.Services.AddDbContext<RotaLandDbContext>(options =>
 builder.Services.AddScoped<SchedulingService>();
 
 var app = builder.Build();
+
+app.UseCors("Frontend");
+
 
 if (app.Environment.IsDevelopment())
 {

@@ -16,7 +16,7 @@ public static class GetWeeklyRotaEndpoint
             var shifts = await db.Shifts
                 .AsNoTracking()
                 .Include(s => s.Employee)
-                .Where(s => s.StartUtc >= start && s.StartUtc < end)
+                .Where(s => s.StartUtc >= start && s.StartUtc < end && s.Employee.IsActive)
                 .OrderBy(s => s.StartUtc)
                 .ToListAsync();
 
