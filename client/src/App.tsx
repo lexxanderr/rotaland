@@ -9,6 +9,8 @@ import {
   X,
   Pencil,
   Trash2,
+  ClipboardList,
+  Check,
 } from 'lucide-react'
 import './App.css'
 
@@ -40,6 +42,18 @@ type WeeklyRota = {
   weekEnd: string
   totalScheduledHours: number
   shifts: Shift[]
+}
+
+type TimeOffRequest = {
+  id: string
+  employeeId: string
+  employeeName: string
+  startDate: string
+  endDate: string
+  reason: string
+  status: 'Pending' | 'Approved' | 'Rejected'
+  createdAtUtc: string
+  reviewedAtUtc: string | null
 }
 
 function getMonday(date: Date) {
@@ -93,7 +107,7 @@ function getLocalTime(value: string) {
 }
 
 function App() {
-  const [page, setPage] = useState<'rota' | 'employees'>('rota')
+  const [page, setPage] = useState<'rota' | 'employees' | 'requests'>('rota')
   const [weekStart, setWeekStart] = useState(getMonday(new Date()))
   const [rota, setRota] = useState<WeeklyRota | null>(null)
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -123,6 +137,16 @@ function App() {
   const [employeeFormError, setEmployeeFormError] = useState('')
   const [savingEmployee, setSavingEmployee] = useState(false)
 
+  const [requests, setRequests] = useState<TimeOffRequest[]>([])
+  const [showRequestModal, setShowRequestModal] = useState(false)
+  const [requestEmployeeId, setRequestEmployeeId] = useState('')
+  const [requestStartDate, setRequestStartDate] = useState('')
+  const [requestEndDate, setRequestEndDate] = useState('')
+  const [requestReason, setRequestReason] = useState('')
+  const [requestFormError, setRequestFormError] = useState('')
+  const [savingRequest, setSavingRequest] = useState(false)
+  const [reviewingRequestId, setReviewingRequestId] = useState<string | null>(null)
+
   const days = useMemo(
     () =>
       Array.from({ length: 7 }, (_, i) => {
@@ -140,21 +164,23 @@ function App() {
       setLoading(true)
       setError('')
 
-      const [rotaResponse, employeesResponse] = await Promise.all([
+      const [rotaResponse, employeesResponse, requestsResponse] = await Promise.all([
         fetch(
           `${API}/api/rota/week?start=${encodeURIComponent(
             toApiDate(weekStart),
           )}`,
         ),
         fetch(`${API}/api/employees`),
+        fetch(`${API}/api/requests/time-off`),
       ])
 
-      if (!rotaResponse.ok || !employeesResponse.ok) {
+      if (!rotaResponse.ok || !employeesResponse.ok || !requestsResponse.ok) {
         throw new Error('Could not load RotaLand data.')
       }
 
       setRota(await rotaResponse.json())
       setEmployees(await employeesResponse.json())
+      setRequests(await requestsResponse.json())
     } catch (err) {
       setError(
         err instanceof Error
@@ -493,6 +519,95 @@ function App() {
     }
   }
 
+
+  function openAddRequest() {
+    setRequestEmployeeId(activeEmployees[0]?.id ?? '')
+    setRequestStartDate('')
+    setRequestEndDate('')
+    setRequestReason('')
+    setRequestFormError('')
+    setShowRequestModal(true)
+  }
+
+  function closeRequestModal() {
+    if (savingRequest) return
+    setShowRequestModal(false)
+    setRequestFormError('')
+  }
+
+  async function saveRequest(event: React.FormEvent) {
+    event.preventDefault()
+    setRequestFormError('')
+
+    if (!requestEmployeeId || !requestStartDate || !requestEndDate || !requestReason.trim()) {
+      setRequestFormError('Please complete all request fields.')
+      return
+    }
+
+    if (requestEndDate < requestStartDate) {
+      setRequestFormError('End date cannot be before start date.')
+      return
+    }
+
+    try {
+      setSavingRequest(true)
+
+      const response = await fetch(`${API}/api/requests/time-off`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeId: requestEmployeeId,
+          startDate: requestStartDate,
+          endDate: requestEndDate,
+          reason: requestReason.trim(),
+        }),
+      })
+
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(data?.message ?? 'Could not create time-off request.')
+      }
+
+      setShowRequestModal(false)
+      await loadData()
+    } catch (err) {
+      setRequestFormError(
+        err instanceof Error ? err.message : 'Could not create time-off request.',
+      )
+    } finally {
+      setSavingRequest(false)
+    }
+  }
+
+  async function reviewRequest(requestId: string, decision: 'approve' | 'reject') {
+    try {
+      setReviewingRequestId(requestId)
+      setError('')
+
+      const response = await fetch(
+        `${API}/api/requests/time-off/${requestId}/${decision}`,
+        { method: 'PUT' },
+      )
+
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(data?.message ?? `Could not ${decision} request.`)
+      }
+
+      await loadData()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not review request.')
+    } finally {
+      setReviewingRequestId(null)
+    }
+  }
+
+  const pendingRequests = requests.filter(request => request.status === 'Pending').length
+  const approvedRequests = requests.filter(request => request.status === 'Approved').length
+  const rejectedRequests = requests.filter(request => request.status === 'Rejected').length
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -516,6 +631,14 @@ function App() {
           >
             <Users size={18} />
             Employees
+          </button>
+
+          <button
+            className={`navItem ${page === 'requests' ? 'active' : ''}`}
+            onClick={() => setPage('requests')}
+          >
+            <ClipboardList size={18} />
+            Requests
           </button>
         </nav>
 
@@ -689,7 +812,7 @@ function App() {
           )}
         </section>
           </>
-        ) : (
+        ) : page === 'employees' ? (
           <>
             <header className="topbar">
               <div>
@@ -768,8 +891,224 @@ function App() {
               </div>
             </section>
           </>
+        ) : (
+          <>
+            <header className="topbar">
+              <div>
+                <div className="eyebrow">TIME OFF</div>
+                <h1>Requests</h1>
+              </div>
+
+              <button
+                className="primaryButton"
+                onClick={openAddRequest}
+                disabled={activeEmployees.length === 0}
+              >
+                <Plus size={17} />
+                New request
+              </button>
+            </header>
+
+            <section className="stats">
+              <div className="statCard">
+                <div className="statIcon"><ClipboardList size={19} /></div>
+                <div><span>Pending</span><strong>{pendingRequests}</strong></div>
+              </div>
+              <div className="statCard">
+                <div className="statIcon"><Check size={19} /></div>
+                <div><span>Approved</span><strong>{approvedRequests}</strong></div>
+              </div>
+              <div className="statCard">
+                <div className="statIcon"><X size={19} /></div>
+                <div><span>Rejected</span><strong>{rejectedRequests}</strong></div>
+              </div>
+            </section>
+
+            <section className="employeePanel">
+              <div className="employeePanelHeader">
+                <div>
+                  <h2>Time-off requests</h2>
+                  <p>{requests.length} total requests</p>
+                </div>
+              </div>
+
+              {error && <div className="state error">{error}</div>}
+
+              <div className="employeeList">
+                {requests.length === 0 ? (
+                  <div className="state">No time-off requests yet.</div>
+                ) : (
+                  requests.map(request => (
+                    <div className="employeeListRow" key={request.id}>
+                      <div className="employeeListIdentity">
+                        <div className="avatar">
+                          {request.employeeName
+                            .split(' ')
+                            .map(part => part[0])
+                            .slice(0, 2)
+                            .join('')}
+                        </div>
+
+                        <div>
+                          <strong>{request.employeeName}</strong>
+                          <span>{request.reason}</span>
+                        </div>
+                      </div>
+
+                      <div className="employeeMeta">
+                        <div>
+                          <span>Dates</span>
+                          <strong>
+                            {new Date(`${request.startDate}T00:00:00`).toLocaleDateString('en-GB', {
+                              day: 'numeric',
+                              month: 'short',
+                            })}
+                            {' – '}
+                            {new Date(`${request.endDate}T00:00:00`).toLocaleDateString('en-GB', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <span>Status</span>
+                          <strong
+                            className={
+                              request.status === 'Approved'
+                                ? 'statusActive'
+                                : request.status === 'Rejected'
+                                  ? 'statusInactive'
+                                  : ''
+                            }
+                          >
+                            {request.status}
+                          </strong>
+                        </div>
+
+                        {request.status === 'Pending' && (
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <button
+                              className="secondaryButton"
+                              onClick={() => reviewRequest(request.id, 'approve')}
+                              disabled={reviewingRequestId === request.id}
+                            >
+                              <Check size={15} />
+                              Approve
+                            </button>
+                            <button
+                              className="dangerButton"
+                              onClick={() => reviewRequest(request.id, 'reject')}
+                              disabled={reviewingRequestId === request.id}
+                            >
+                              <X size={15} />
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </section>
+          </>
         )}
       </main>
+
+      {showRequestModal && (
+        <div
+          className="modalBackdrop"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget) closeRequestModal()
+          }}
+        >
+          <div className="modal">
+            <div className="modalHeader">
+              <div>
+                <div className="eyebrow">TIME OFF</div>
+                <h2>New time-off request</h2>
+              </div>
+
+              <button className="closeButton" onClick={closeRequestModal}>
+                <X size={19} />
+              </button>
+            </div>
+
+            <form onSubmit={saveRequest}>
+              <label>
+                Employee
+                <select
+                  value={requestEmployeeId}
+                  onChange={event => setRequestEmployeeId(event.target.value)}
+                >
+                  {activeEmployees.map(employee => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.firstName} {employee.lastName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="formGrid">
+                <label>
+                  Start date
+                  <input
+                    type="date"
+                    value={requestStartDate}
+                    onChange={event => setRequestStartDate(event.target.value)}
+                  />
+                </label>
+
+                <label>
+                  End date
+                  <input
+                    type="date"
+                    value={requestEndDate}
+                    onChange={event => setRequestEndDate(event.target.value)}
+                  />
+                </label>
+              </div>
+
+              <label>
+                Reason
+                <input
+                  value={requestReason}
+                  onChange={event => setRequestReason(event.target.value)}
+                  placeholder="e.g. Annual leave"
+                />
+              </label>
+
+              {requestFormError && (
+                <div className="formError">{requestFormError}</div>
+              )}
+
+              <div className="modalActions">
+                <div />
+                <div className="modalActionsRight">
+                  <button
+                    type="button"
+                    className="secondaryButton"
+                    onClick={closeRequestModal}
+                    disabled={savingRequest}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="primaryButton"
+                    disabled={savingRequest}
+                  >
+                    {savingRequest ? 'Submitting…' : 'Submit request'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {showEmployeeModal && (
         <div

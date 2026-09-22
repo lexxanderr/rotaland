@@ -4,6 +4,7 @@ using RotaLand.Api.Domain.Employees;
 using RotaLand.Api.Domain.Locations;
 using RotaLand.Api.Domain.Organisations;
 using RotaLand.Api.Domain.Scheduling;
+using RotaLand.Api.Domain.Requests;
 
 namespace RotaLand.Api.Data;
 
@@ -19,4 +20,6 @@ public class RotaLandDbContext(DbContextOptions<RotaLandDbContext> options)
     public DbSet<Employee> Employees => Set<Employee>();
 
     public DbSet<Shift> Shifts => Set<Shift>();
+
+    public DbSet<TimeOffRequest> TimeOffRequests => Set<TimeOffRequest>();
 }

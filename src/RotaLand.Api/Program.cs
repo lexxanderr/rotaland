@@ -1,3 +1,4 @@
+using RotaLand.Api.Endpoints.Requests;
 using Microsoft.EntityFrameworkCore;
 using RotaLand.Api.Data;
 using RotaLand.Api.Endpoints.Shifts;
@@ -63,5 +64,10 @@ app.MapGetEmployeeEndpoint();
 app.MapUpdateEmployeeEndpoint();
 app.MapDeleteEmployeeEndpoint();
 app.MapReactivateEmployeeEndpoint();
+
+app.MapCreateTimeOffRequestEndpoint();
+app.MapGetTimeOffRequestsEndpoint();
+app.MapApproveTimeOffRequestEndpoint();
+app.MapRejectTimeOffRequestEndpoint();
 
 app.Run();
