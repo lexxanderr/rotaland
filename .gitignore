@@ -1,0 +1,24 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Environment / secrets
+.env
+.env.*
+appsettings.Local.json
+
+# Logs
+*.log
+
+# Frontend - for later
+node_modules/
+dist/
