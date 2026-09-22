@@ -36,6 +36,8 @@ app.MapCreateShiftEndpoint();
 app.MapGetShiftsEndpoint();
 app.MapGetEmployeeShiftsEndpoint();
 app.MapGetWeeklyRotaEndpoint();
+app.MapDeleteShiftEndpoint();
+app.MapUpdateShiftEndpoint();
 app.MapCreateEmployeeEndpoint();
 app.MapGetEmployeesEndpoint();
 
