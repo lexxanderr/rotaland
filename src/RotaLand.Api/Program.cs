@@ -40,5 +40,8 @@ app.MapDeleteShiftEndpoint();
 app.MapUpdateShiftEndpoint();
 app.MapCreateEmployeeEndpoint();
 app.MapGetEmployeesEndpoint();
+app.MapGetEmployeeEndpoint();
+app.MapUpdateEmployeeEndpoint();
+app.MapDeleteEmployeeEndpoint();
 
 app.Run();
