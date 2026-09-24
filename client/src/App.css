@@ -1136,3 +1136,377 @@ button.employeeListRow:hover { background: #fafbfc; }
     width: 100%;
   }
 }
+
+.amendRotaButton {
+  min-height: 38px;
+  padding: 0 15px;
+  border: 1px solid #d7dce3;
+  border-radius: 10px;
+  background: #fff;
+  color: #18202c;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.amendRotaButton:hover {
+  background: #f7f8fa;
+}
+
+.amendRotaButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .amendRotaButton {
+    flex: 1;
+  }
+}
+
+/* =========================================================
+   RotaLand — stable mobile modal / bottom sheet
+   ========================================================= */
+@media (max-width: 760px) {
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .modalBackdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    padding: 0 !important;
+    margin: 0 !important;
+
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+
+    overflow: hidden !important;
+    overscroll-behavior: contain;
+
+    background: rgba(16, 24, 40, .52);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+
+    z-index: 1000 !important;
+  }
+
+  .modal {
+    box-sizing: border-box !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    height: auto !important;
+    max-height: 88dvh !important;
+
+    margin: 0 !important;
+    padding:
+      22px
+      18px
+      calc(20px + env(safe-area-inset-bottom))
+      18px !important;
+
+    border-radius: 22px 22px 0 0 !important;
+
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+
+    background: #fff;
+  }
+
+  .modalHeader,
+  .modal form,
+  .modal label,
+  .formRow,
+  .formGrid,
+  .breakInput,
+  .modalActions,
+  .modalRightActions,
+  .modalActionsRight {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .modal form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .formRow,
+  .formGrid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .modal input,
+  .modal select {
+    box-sizing: border-box !important;
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+
+    min-height: 48px;
+    font-size: 16px !important;
+  }
+
+  .breakInput {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .breakInput input {
+    min-width: 0 !important;
+  }
+
+  .breakInput span {
+    white-space: nowrap;
+  }
+
+  .formError {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .modalActions {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    gap: 9px !important;
+    padding-top: 10px;
+  }
+
+  .modalRightActions,
+  .modalActionsRight {
+    display: flex !important;
+    flex: 1 1 auto;
+    width: auto !important;
+    min-width: 0;
+    margin: 0 !important;
+    gap: 9px;
+  }
+
+  .modalActions button,
+  .modalRightActions button,
+  .modalActionsRight button {
+    min-width: 0 !important;
+  }
+
+  .modalActions > .secondaryButton {
+    flex: 1 1 42%;
+  }
+
+  .modalRightActions,
+  .modalActionsRight {
+    flex: 1 1 58%;
+  }
+
+  .modalRightActions > *,
+  .modalActionsRight > * {
+    flex: 1 1 auto;
+  }
+}
+
+
+/* ========================================================
+   ROTALAND DEPARTMENT DRILL-DOWN
+   ======================================================== */
+
+.mobileDepartmentStrip,
+.departmentOverview {
+  display: none;
+}
+
+@media (max-width: 760px) {
+
+  .mobileDepartmentStrip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 16px 28px 5px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobileDepartmentStrip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobileDepartmentStrip button {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 38px;
+    padding: 8px 13px;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 999px;
+
+    background: #f8f9fb;
+    color: #667085;
+
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .mobileDepartmentStrip button span {
+    display: grid;
+    place-items: center;
+
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+
+    border-radius: 999px;
+    background: #eaecf0;
+
+    color: #667085;
+    font-size: 9px;
+  }
+
+  .mobileDepartmentStrip button.active {
+    background: #101828;
+    border-color: #101828;
+    color: #fff;
+
+    box-shadow: 0 8px 18px rgba(16, 24, 40, .12);
+  }
+
+  .mobileDepartmentStrip button.active span {
+    background: rgba(255,255,255,.15);
+    color: #fff;
+  }
+
+
+  /* STORE OVERVIEW */
+
+  .departmentOverview {
+    display: grid;
+    gap: 10px;
+    padding: 5px 28px 24px;
+  }
+
+  .departmentOverviewCard {
+    width: 100%;
+
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 12px;
+
+    padding: 14px;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 17px;
+
+    background: #fff;
+    color: #101828;
+
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    box-shadow: 0 3px 10px rgba(16,24,40,.025);
+  }
+
+  .departmentOverviewMain {
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+    gap: 11px;
+  }
+
+  .departmentOverviewIcon {
+    flex: 0 0 auto;
+
+    width: 42px;
+    height: 42px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 12px;
+
+    background: #f0f2f5;
+    color: #344054;
+
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .04em;
+  }
+
+  .departmentOverviewMain > div:last-child {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+  }
+
+  .departmentOverviewMain strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    font-size: 13px;
+    color: #101828;
+  }
+
+  .departmentOverviewMain span {
+    color: #98a2b3;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .departmentOverviewCoverage {
+    min-width: 50px;
+
+    display: grid;
+    justify-items: end;
+    gap: 1px;
+  }
+
+  .departmentOverviewCoverage strong {
+    color: #101828;
+    font-size: 15px;
+  }
+
+  .departmentOverviewCoverage span {
+    color: #98a2b3;
+    font-size: 8px;
+    font-weight: 700;
+  }
+
+  .mobileAgendaPerson span {
+    max-width: 190px;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

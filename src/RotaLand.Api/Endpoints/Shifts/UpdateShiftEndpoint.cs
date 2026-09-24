@@ -31,6 +31,21 @@ public static class UpdateShiftEndpoint
                 });
             }
 
+            var currentWeekStart = RotaWeek.GetMonday(shift.StartUtc);
+
+            var publishedRota = await db.RotaPublications
+                .AnyAsync(r =>
+                    r.WeekStartUtc == currentWeekStart &&
+                    r.Status == "Published");
+
+            if (publishedRota)
+            {
+                return Results.Conflict(new
+                {
+                    message = "This rota is published. Amend it before editing shifts."
+                });
+            }
+
             var updatedShift = new Shift
             {
                 Id = shift.Id,

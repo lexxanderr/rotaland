@@ -50,6 +50,21 @@ public static class CreateShiftEndpoint
                 });
             }
 
+            var weekStart = RotaWeek.GetMonday(shift.StartUtc);
+
+            var publishedRota = await db.RotaPublications
+                .AnyAsync(r =>
+                    r.WeekStartUtc == weekStart &&
+                    r.Status == "Published");
+
+            if (publishedRota)
+            {
+                return Results.Conflict(new
+                {
+                    message = "This rota is published. Amend it before adding shifts."
+                });
+            }
+
             var existingShifts = await db.Shifts
                 .Where(s => s.EmployeeId == employee.Id)
                 .ToListAsync();

@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using RotaLand.Api.Data;
+using RotaLand.Api.Services.Scheduling;
 
 namespace RotaLand.Api.Endpoints.Shifts;
 
@@ -17,6 +19,21 @@ public static class DeleteShiftEndpoint
                 return Results.NotFound(new
                 {
                     message = "Shift not found."
+                });
+            }
+
+            var weekStart = RotaWeek.GetMonday(shift.StartUtc);
+
+            var publishedRota = await db.RotaPublications
+                .AnyAsync(r =>
+                    r.WeekStartUtc == weekStart &&
+                    r.Status == "Published");
+
+            if (publishedRota)
+            {
+                return Results.Conflict(new
+                {
+                    message = "This rota is published. Amend it before deleting shifts."
                 });
             }
 

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using RotaLand.Api.Data;
+using RotaLand.Api.Services.Scheduling;
 
 namespace RotaLand.Api.Endpoints.Shifts;
 
@@ -11,7 +12,7 @@ public static class GetWeeklyRotaEndpoint
             DateTime start,
             RotaLandDbContext db) =>
         {
-            var weekStart = DateTime.SpecifyKind(start.Date, DateTimeKind.Utc);
+            var weekStart = RotaWeek.GetMonday(start);
             var end = weekStart.AddDays(7);
 
             var publication = await db.RotaPublications
@@ -40,8 +41,13 @@ public static class GetWeeklyRotaEndpoint
             {
                 WeekStart = weekStart,
                 WeekEnd = end,
-                Status = publication?.Status ?? "Draft",
+                Status = publication?.Status == "Published" && publication.Version > 1
+                    ? "Updated"
+                    : publication?.Status ?? "Draft",
+                Version = publication?.Version ?? 0,
+                WasPreviouslyPublished = (publication?.Version ?? 0) > 0,
                 PublishedAtUtc = publication?.PublishedAtUtc,
+                LastUpdatedAtUtc = publication?.LastUpdatedAtUtc,
                 TotalScheduledHours = shifts.Sum(s => s.GetPaidHours()),
                 Shifts = shiftResults
             });

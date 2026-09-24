@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RotaLand.Api.Data;
 using RotaLand.Api.Domain.Scheduling;
+using RotaLand.Api.Services.Scheduling;
 
 namespace RotaLand.Api.Endpoints.Rota;
 
@@ -12,7 +13,8 @@ public static class PublishRotaEndpoint
             DateTime start,
             RotaLandDbContext db) =>
         {
-            var weekStart = DateTime.SpecifyKind(start.Date, DateTimeKind.Utc);
+            var weekStart = RotaWeek.GetMonday(start);
+            var now = DateTime.UtcNow;
 
             var publication = await db.RotaPublications
                 .SingleOrDefaultAsync(r => r.WeekStartUtc == weekStart);
@@ -23,15 +25,34 @@ public static class PublishRotaEndpoint
                 {
                     WeekStartUtc = weekStart,
                     Status = "Published",
-                    PublishedAtUtc = DateTime.UtcNow
+                    Version = 1,
+                    PublishedAtUtc = now
                 };
 
                 db.RotaPublications.Add(publication);
             }
             else
             {
+                if (publication.Status == "Published")
+                {
+                    return Results.Conflict(new
+                    {
+                        message = "This rota is already published."
+                    });
+                }
+
+                publication.Version++;
+
+                if (publication.Version == 1)
+                {
+                    publication.PublishedAtUtc = now;
+                }
+                else
+                {
+                    publication.LastUpdatedAtUtc = now;
+                }
+
                 publication.Status = "Published";
-                publication.PublishedAtUtc = DateTime.UtcNow;
             }
 
             await db.SaveChangesAsync();
@@ -39,8 +60,10 @@ public static class PublishRotaEndpoint
             return Results.Ok(new
             {
                 publication.WeekStartUtc,
-                publication.Status,
-                publication.PublishedAtUtc
+                Status = publication.Version > 1 ? "Updated" : "Published",
+                publication.Version,
+                publication.PublishedAtUtc,
+                publication.LastUpdatedAtUtc
             });
         });
     }
