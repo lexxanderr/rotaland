@@ -12,6 +12,7 @@ import {
   ClipboardList,
   Check,
 } from 'lucide-react'
+import DepartmentPicker from './components/DepartmentPicker'
 import './App.css'
 
 const API = 'http://172.20.10.4:5153'
@@ -23,6 +24,7 @@ type Employee = {
   email: string
   role: string
   contractedHoursPerWeek: number
+  departmentId: string
   departmentName: string
   isActive: boolean
 }
@@ -129,6 +131,7 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const [showDepartmentPicker, setShowDepartmentPicker] = useState(false)
   const [showShiftModal, setShowShiftModal] = useState(false)
   const [editingShift, setEditingShift] = useState<Shift | null>(null)
 
@@ -143,14 +146,19 @@ function App() {
   const [breakMinutes, setBreakMinutes] = useState(30)
 
   const [showEmployeeModal, setShowEmployeeModal] = useState(false)
+  const [peopleDepartment, setPeopleDepartment] = useState<string | null>(null)
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
   const [employeeFirstName, setEmployeeFirstName] = useState('')
   const [employeeLastName, setEmployeeLastName] = useState('')
   const [employeeEmail, setEmployeeEmail] = useState('')
   const [employeeRole, setEmployeeRole] = useState('Team Member')
+  const [employeeDepartmentId, setEmployeeDepartmentId] = useState('')
   const [employeeHours, setEmployeeHours] = useState(40)
+
   const [employeeFormError, setEmployeeFormError] = useState('')
   const [savingEmployee, setSavingEmployee] = useState(false)
+
+  
 
   const [requests, setRequests] = useState<TimeOffRequest[]>([])
   const [showRequestModal, setShowRequestModal] = useState(false)
@@ -172,11 +180,51 @@ function App() {
     [weekStart],
   )
 
+  const modalOpen = showEmployeeModal || showShiftModal || showRequestModal
+
+  useEffect(() => {
+    if (modalOpen === false) return
+
+    const scrollY = window.scrollY
+    const body = document.body
+
+    body.style.position = 'fixed'
+    body.style.top = `-${scrollY}px`
+    body.style.left = '0'
+    body.style.right = '0'
+    body.style.width = '100%'
+    body.style.overflow = 'hidden'
+
+    return () => {
+      body.style.position = ''
+      body.style.top = ''
+      body.style.left = ''
+      body.style.right = ''
+      body.style.width = ''
+      body.style.overflow = ''
+      window.scrollTo(0, scrollY)
+    }
+  }, [modalOpen])
+
   const activeEmployees = employees.filter(e => e.isActive)
 
   const departmentNames = Array.from(
     new Set(activeEmployees.map(employee => employee.departmentName).filter(Boolean))
   ).sort()
+
+  const employeeDepartments = Array.from(
+    new Map(
+      employees
+        .filter(employee => employee.departmentId && employee.departmentName)
+        .map(employee => [
+          employee.departmentId,
+          {
+            id: employee.departmentId,
+            name: employee.departmentName,
+          },
+        ]),
+    ).values(),
+  ).sort((a, b) => a.name.localeCompare(b.name))
 
   const filteredEmployees =
     selectedDepartment === 'All'
@@ -481,6 +529,7 @@ function App() {
     setEmployeeHours(40)
     setEmployeeFormError('')
     setShowEmployeeModal(true)
+    setEmployeeDepartmentId(employeeDepartments[0]?.id ?? '')
   }
 
   function openEditEmployee(employee: Employee) {
@@ -489,7 +538,9 @@ function App() {
     setEmployeeLastName(employee.lastName)
     setEmployeeEmail(employee.email)
     setEmployeeRole(employee.role)
+    setEmployeeDepartmentId(employee.departmentId)
     setEmployeeHours(employee.contractedHoursPerWeek)
+    setEmployeeDepartmentId(employee.departmentId)
     setEmployeeFormError('')
     setShowEmployeeModal(true)
   }
@@ -509,7 +560,8 @@ function App() {
       !employeeFirstName.trim() ||
       !employeeLastName.trim() ||
       !employeeEmail.trim() ||
-      !employeeRole.trim()
+      !employeeRole.trim() ||
+      !employeeDepartmentId
     ) {
       setEmployeeFormError('Please complete all employee fields.')
       return
@@ -533,7 +585,7 @@ function App() {
             email: employeeEmail.trim(),
             role: employeeRole.trim(),
             contractedHoursPerWeek: Number(employeeHours),
-            departmentId: 'bccd62a9-0288-4d8d-9c00-1f3537c91eee',
+            departmentId: employeeDepartmentId,
           }),
         },
       )
@@ -780,7 +832,7 @@ function App() {
           </div>
 
           <button
-            className="primaryButton"
+            className="primaryButton rotaAddButton pageActionButton"
             aria-label="Add shift"
             onClick={openAddShift}
             disabled={activeEmployees.length === 0}
@@ -948,111 +1000,188 @@ function App() {
 
               <div className="mobileAgenda">
 
-                <div
-                  className="mobileDepartmentStrip"
-                  aria-label="Filter rota by department"
-                >
-                  <button
-                    className={selectedDepartment === 'All' ? 'active' : ''}
-                    onClick={() => setSelectedDepartment('All')}
-                  >
-                    All
-                    <span>{activeEmployees.length}</span>
-                  </button>
-
-                  {departmentNames.map(department => {
-                    const count = activeEmployees.filter(
-                      employee => employee.departmentName === department
-                    ).length
-
-                    return (
-                      <button
-                        key={department}
-                        className={
-                          selectedDepartment === department ? 'active' : ''
-                        }
-                        onClick={() => setSelectedDepartment(department)}
-                      >
-                        {department}
-                        <span>{count}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-
-                <div className="mobileDayStrip" aria-label="Choose rota day">
-                  {days.map((day, index) => (
-                    <button
-                      key={day.toISOString()}
-                      className={index === selectedDayIndex ? 'active' : ''}
-                      onClick={() => setSelectedDayIndex(index)}
-                    >
+                <div className="mobileRotaControls">
+                  <div className="mobileDaySection">
+                    <div className="mobileControlLabel">
+                      <span>SELECT DAY</span>
                       <span>
-                        {day.toLocaleDateString('en-GB', { weekday: 'short' })}
+                        {days[selectedDayIndex].toLocaleDateString('en-GB', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'short',
+                        })}
                       </span>
-                      <strong>{day.getDate()}</strong>
-                    </button>
-                  ))}
-                </div>
+                    </div>
 
-                <div className="mobileAgendaHeader">
-                  <div>
-                    <span className="eyebrow">
-                      {selectedDepartment === 'All'
-                        ? 'STORE OVERVIEW'
-                        : selectedDepartment.toUpperCase()}
-                    </span>
-
-                    <h3>
-                      {days[selectedDayIndex].toLocaleDateString('en-GB', {
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'long',
-                      })}
-                    </h3>
+                    <div className="mobileDayStrip">
+                      {days.map((day, index) => (
+                        <button
+                          type="button"
+                          key={day.toISOString()}
+                          className={index === selectedDayIndex ? 'active' : ''}
+                          onClick={() => setSelectedDayIndex(index)}
+                        >
+                          <span>
+                            {day
+                              .toLocaleDateString('en-GB', {
+                                weekday: 'short',
+                              })
+                              .toUpperCase()}
+                          </span>
+                          <strong>{day.getDate()}</strong>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-
-                  <span className="mobileShiftCount">
-                    {filteredEmployees.filter(employee =>
-                      shiftFor(employee.id, days[selectedDayIndex])
-                    ).length}{' '}
-                    {filteredEmployees.filter(employee =>
-                      shiftFor(employee.id, days[selectedDayIndex])
-                    ).length === 1
-                      ? 'shift'
-                      : 'shifts'}
-                  </span>
                 </div>
+              </div>
+
+              <div className="mobileStaffingWorkspace">
+                {selectedDepartment === 'All' ? (
+                  <div className="mobileAgendaHeader storeOverviewHeader">
+                    <div>
+                      <span className="eyebrow">STORE OVERVIEW</span>
+                      <h3>Staffing overview</h3>
+                    </div>
+
+                    <span className="mobileShiftCount">
+                      {filteredEmployees.filter(employee =>
+                        shiftFor(employee.id, days[selectedDayIndex])
+                      ).length} working
+                    </span>
+                  </div>
+                ) : (
+                  <div className="departmentDrilldownHeader">
+                    <button
+                      type="button"
+                      className="backToStoreOverview"
+                      onClick={() => setSelectedDepartment('All')}
+                    >
+                      <ChevronLeft size={15} />
+                      Store overview
+                    </button>
+
+                    <div className="departmentDrilldownTitle">
+                      <div>
+                        <span className="eyebrow">
+                          {selectedDepartment.toUpperCase()}
+                        </span>
+                        <h3>{selectedDepartment} rota</h3>
+                        <span className="departmentTeamCount">
+                          {filteredEmployees.length} team members
+                        </span>
+                      </div>
+
+                      <div className="departmentWorkingCount">
+                        <strong>
+                          {filteredEmployees.filter(employee =>
+                            shiftFor(employee.id, days[selectedDayIndex])
+                          ).length}
+                        </strong>
+                        <span>working</span>
+                      </div>
+                    </div>
+
+                    <div className="departmentDayContext">
+                      <span>
+                        {days[selectedDayIndex].toLocaleDateString('en-GB', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                        }).toUpperCase()}
+                      </span>
+
+                      <strong>
+                        {filteredEmployees.filter(employee =>
+                          shiftFor(employee.id, days[selectedDayIndex])
+                        ).length}{' '}
+                        {filteredEmployees.filter(employee =>
+                          shiftFor(employee.id, days[selectedDayIndex])
+                        ).length === 1 ? 'shift' : 'shifts'}
+                      </strong>
+                    </div>
+                  </div>
+                )}
 
                 {selectedDepartment === 'All' ? (
                   <div className="departmentOverview">
-                    {departmentSummary.map(department => (
-                      <button
-                        className="departmentOverviewCard"
-                        key={department.name}
-                        onClick={() => setSelectedDepartment(department.name)}
-                      >
-                        <div className="departmentOverviewMain">
-                          <div className="departmentOverviewIcon">
-                            {department.name.slice(0, 2).toUpperCase()}
-                          </div>
+                    <div className="storeCoverageSummary">
+                      <div>
+                        <span className="storeCoverageLabel">
+                          TEAM COVERAGE
+                        </span>
+                        <strong>
+                          {departmentSummary.reduce(
+                            (total, department) =>
+                              total + department.scheduledToday,
+                            0
+                          )}{' '}
+                          of {activeEmployees.length} team members scheduled
+                        </strong>
+                      </div>
 
-                          <div>
-                            <strong>{department.name}</strong>
-                            <span>
-                              {department.staffCount} staff
-                            </span>
-                          </div>
-                        </div>
+                      <span className="storeCoverageDepartments">
+                        {departmentSummary.length} departments
+                      </span>
+                    </div>
 
-                        <div className="departmentOverviewCoverage">
-                          <strong>{department.scheduledToday}</strong>
-                          <span>scheduled</span>
-                        </div>
+                    <div className="departmentOverviewList">
+                      {departmentSummary.map(department => {
+                        const hasCoverage = department.scheduledToday > 0
 
-                        <ChevronRight size={18} />
-                      </button>
-                    ))}
+                        return (
+                          <button
+                            className={`departmentOverviewCard ${
+                              hasCoverage ? 'hasCoverage' : 'noCoverage'
+                            }`}
+                            key={department.name}
+                            onClick={() =>
+                              setSelectedDepartment(department.name)
+                            }
+                          >
+                            <div className="departmentOverviewMain">
+                              <div className="departmentOverviewIcon">
+                                {department.name.slice(0, 2).toUpperCase()}
+                              </div>
+
+                              <div className="departmentOverviewIdentity">
+                                <strong>{department.name}</strong>
+                                <span>
+                                  {department.staffCount} team members
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="departmentOverviewAction">
+                              <div className="departmentOverviewCoverage">
+                                {hasCoverage ? (
+                                  <>
+                                    <strong>
+                                      {department.scheduledToday}
+                                    </strong>
+                                    <span>
+                                      {department.scheduledToday === 1
+                                        ? 'working'
+                                        : 'working'}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <strong>—</strong>
+                                    <span>No one scheduled</span>
+                                  </>
+                                )}
+                              </div>
+
+                              <div className="departmentOverviewOpen">
+                                <span>View rota</span>
+                                <ChevronRight size={17} />
+                              </div>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
                 ) : (
                   <div className="mobileAgendaList">
@@ -1113,75 +1242,163 @@ function App() {
                 <h1>Employees</h1>
               </div>
 
-              <button className="primaryButton" onClick={openAddEmployee}>
-                <Plus size={17} />
-                Add employee
+              <button
+                className="primaryButton peopleAddButton pageActionButton"
+                onClick={openAddEmployee}
+                aria-label="Add employee"
+                title="Add employee"
+              >
+                <Plus size={20} />
               </button>
             </header>
 
-            <section className="employeePanel">
-              <div className="employeePanelHeader">
-                <div>
-                  <h2>Team</h2>
-                  <p>{activeEmployees.length} active employees</p>
-                </div>
-              </div>
-
-              <div className="employeeList">
-                {employees.map(employee => (
-                  <button
-                    className="employeeListRow"
-                    key={employee.id}
-                    onClick={() => openEditEmployee(employee)}
-                  >
-                    <div className="employeeListIdentity">
-                      <div className="avatar">
-                        {employee.firstName[0]}
-                        {employee.lastName[0]}
-                      </div>
-
-                      <div>
-                        <strong>
-                          {employee.firstName} {employee.lastName}
-                        </strong>
-                        <span>{employee.email}</span>
-                      </div>
+            <section className="peopleWorkspace">
+              {!peopleDepartment ? (
+                <>
+                  <div className="peopleOverview peopleOverviewCompact">
+                    <div>
+                      <div className="peopleOverviewLabel">TEAM OVERVIEW</div>
+                      <h2>{activeEmployees.length} active employees</h2>
+                      <p>
+                        {departmentNames.length} departments ·{' '}
+                        {activeEmployees.reduce(
+                          (total, employee) =>
+                            total + employee.contractedHoursPerWeek,
+                          0,
+                        )}h contracted / week
+                      </p>
                     </div>
+                  </div>
 
-                    <div className="employeeMeta">
-                      <div>
-                        <span>Role</span>
-                        <strong>{employee.role}</strong>
-                      </div>
+                  <div className="peopleSectionHeading">
+                    <span>DEPARTMENTS</span>
+                  </div>
 
-                      <div>
-                        <span>Department</span>
-                        <strong>{employee.departmentName}</strong>
-                      </div>
+                  <div className="peopleDepartmentDirectory">
+                    {departmentNames.map(department => {
+                      const departmentEmployees = activeEmployees.filter(
+                        employee => employee.departmentName === department,
+                      )
 
-                      <div>
-                        <span>Contract</span>
-                        <strong>
-                          {employee.contractedHoursPerWeek}h / week
-                        </strong>
-                      </div>
+                      const supervisorCount = departmentEmployees.filter(
+                        employee =>
+                          employee.role.toLowerCase().includes('supervisor'),
+                      ).length
 
-                      <div>
-                        <span>Status</span>
-                        <strong
-                          className={
-                            employee.isActive
-                              ? 'statusActive'
-                              : 'statusInactive'
-                          }
+                      const initials = department
+                        .split(/\s|&/)
+                        .filter(Boolean)
+                        .map(part => part[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase()
+
+                      return (
+                        <button
+                          type="button"
+                          className="peopleDepartmentRow"
+                          key={department}
+                          onClick={() => setPeopleDepartment(department)}
                         >
-                          {employee.isActive ? 'Active' : 'Inactive'}
-                        </strong>
-                      </div>
-                    </div>
+                          <div className="peopleDepartmentInitials">
+                            {initials}
+                          </div>
+
+                          <div className="peopleDepartmentInfo">
+                            <strong>{department}</strong>
+                            <span>
+                              {departmentEmployees.length}{' '}
+                              {departmentEmployees.length === 1
+                                ? 'team member'
+                                : 'team members'}
+                            </span>
+                            <small>
+                              {supervisorCount > 0
+                                ? `${supervisorCount} ${
+                                    supervisorCount === 1
+                                      ? 'supervisor'
+                                      : 'supervisors'
+                                  } · ${
+                                    departmentEmployees.length - supervisorCount
+                                  } other team ${
+                                    departmentEmployees.length -
+                                      supervisorCount ===
+                                    1
+                                      ? 'member'
+                                      : 'members'
+                                  }`
+                                : `${departmentEmployees.length} team members`}
+                            </small>
+                          </div>
+
+                          <div className="peopleDepartmentArrow">›</div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="peopleBackButton"
+                    onClick={() => setPeopleDepartment(null)}
+                  >
+                    ‹ All departments
                   </button>
-                ))}
-              </div>
+
+                  <div className="peopleDepartmentDetailHeader">
+                    <div>
+                      <div className="peopleOverviewLabel">DEPARTMENT</div>
+                      <h2>{peopleDepartment}</h2>
+                      <p>
+                        {
+                          activeEmployees.filter(
+                            employee =>
+                              employee.departmentName === peopleDepartment,
+                          ).length
+                        }{' '}
+                        team members
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="peopleTeamDetail">
+                    {activeEmployees
+                      .filter(
+                        employee =>
+                          employee.departmentName === peopleDepartment,
+                      )
+                      .map(employee => (
+                        <button
+                          type="button"
+                          className="peopleEmployeeRow"
+                          key={employee.id}
+                          onClick={() => openEditEmployee(employee)}
+                        >
+                          <div className="avatar peopleEmployeeAvatar">
+                            {employee.firstName[0]}
+                            {employee.lastName[0]}
+                          </div>
+
+                          <div className="peopleEmployeeInfo">
+                            <strong>
+                              {employee.firstName} {employee.lastName}
+                            </strong>
+                            <span>{employee.role}</span>
+                            <small>
+                              {employee.contractedHoursPerWeek}h / week
+                              <span className="peopleActiveDot">•</span>
+                              Active
+                            </small>
+                          </div>
+
+                          <div className="peopleDepartmentArrow">›</div>
+                        </button>
+                      ))}
+                  </div>
+                </>
+              )}
             </section>
           </>
         ) : (
@@ -1193,12 +1410,13 @@ function App() {
               </div>
 
               <button
-                className="primaryButton"
+                className="primaryButton pageActionButton"
                 onClick={openAddRequest}
                 disabled={activeEmployees.length === 0}
+                aria-label="New request"
+                title="New request"
               >
-                <Plus size={17} />
-                New request
+                <Plus size={20} />
               </button>
             </header>
 
@@ -1328,94 +1546,124 @@ function App() {
         </button>
       </nav>
 
+      <DepartmentPicker
+        open={showDepartmentPicker}
+        selectedDepartment={selectedDepartment}
+        totalStaff={activeEmployees.length}
+        totalScheduledToday={
+          activeEmployees.filter(employee =>
+            shiftFor(employee.id, days[selectedDayIndex])
+          ).length
+        }
+        departments={departmentSummary}
+        onSelect={setSelectedDepartment}
+        onClose={() => setShowDepartmentPicker(false)}
+      />
+
       {showRequestModal && (
         <div
           className="modalBackdrop"
           onMouseDown={event => {
-            if (event.target === event.currentTarget) closeRequestModal()
+            if (event.target === event.currentTarget) {
+              closeRequestModal()
+            }
           }}
         >
           <div className="modal">
             <div className="modalHeader">
               <div>
                 <div className="eyebrow">TIME OFF</div>
-                <h2>New time-off request</h2>
+                <h2>New request</h2>
               </div>
 
-              <button className="closeButton" onClick={closeRequestModal}>
+              <button
+                type="button"
+                className="closeButton"
+                onClick={closeRequestModal}
+                aria-label="Close"
+              >
                 <X size={19} />
               </button>
             </div>
 
-            <form onSubmit={saveRequest}>
-              <label>
-                Employee
-                <select
-                  value={requestEmployeeId}
-                  onChange={event => setRequestEmployeeId(event.target.value)}
-                >
-                  {activeEmployees.map(employee => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.firstName} {employee.lastName}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <form onSubmit={saveRequest} className="premiumForm">
+              <div className="formSection">
+                <div className="formSectionLabel">EMPLOYEE</div>
 
-              <div className="formGrid">
-                <label>
-                  Start date
-                  <input
-                    type="date"
-                    value={requestStartDate}
-                    onChange={event => setRequestStartDate(event.target.value)}
-                  />
-                </label>
+                <div className="premiumSelectWrap">
+                  <div className="employeeMiniAvatar">
+                    {activeEmployees
+                      .find(employee => employee.id === requestEmployeeId)
+                      ?.firstName?.charAt(0)}
+                    {activeEmployees
+                      .find(employee => employee.id === requestEmployeeId)
+                      ?.lastName?.charAt(0)}
+                  </div>
 
-                <label>
-                  End date
-                  <input
-                    type="date"
-                    value={requestEndDate}
-                    onChange={event => setRequestEndDate(event.target.value)}
-                  />
-                </label>
+                  <select
+                    className="premiumSelect"
+                    value={requestEmployeeId}
+                    onChange={event => setRequestEmployeeId(event.target.value)}
+                  >
+                    {activeEmployees.map(employee => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.firstName} {employee.lastName}
+                      </option>
+                    ))}
+                  </select>
+
+                  <span className="fieldChevron">›</span>
+                </div>
               </div>
 
-              <label>
-                Reason
+              <div className="formSection">
+                <div className="formSectionLabel">DATES</div>
+
+                <div className="timeFieldGroup">
+                  <label className="timeField">
+                    <span>START</span>
+                    <input
+                      type="date"
+                      value={requestStartDate}
+                      onChange={event => setRequestStartDate(event.target.value)}
+                    />
+                  </label>
+
+                  <label className="timeField">
+                    <span>END</span>
+                    <input
+                      type="date"
+                      value={requestEndDate}
+                      min={requestStartDate || undefined}
+                      onChange={event => setRequestEndDate(event.target.value)}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="formSection">
+                <div className="formSectionLabel">REASON</div>
+
                 <input
+                  className="premiumField"
                   value={requestReason}
                   onChange={event => setRequestReason(event.target.value)}
                   placeholder="e.g. Annual leave"
                 />
-              </label>
+              </div>
 
               {requestFormError && (
                 <div className="formError">{requestFormError}</div>
               )}
 
-              <div className="modalActions">
-                <div />
-                <div className="modalActionsRight">
-                  <button
-                    type="button"
-                    className="secondaryButton"
-                    onClick={closeRequestModal}
-                    disabled={savingRequest}
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="submit"
-                    className="primaryButton"
-                    disabled={savingRequest}
-                  >
-                    {savingRequest ? 'Submitting…' : 'Submit request'}
-                  </button>
-                </div>
-              </div>
+              <button
+                type="submit"
+                className="primaryButton premiumSubmitButton"
+                disabled={savingRequest}
+              >
+                <ClipboardList size={18} />
+                {savingRequest ? 'Creating…' : 'Create request'}
+              </button>
             </form>
           </div>
         </div>
@@ -1447,62 +1695,109 @@ function App() {
               </button>
             </div>
 
-            <form onSubmit={saveEmployee}>
-              <div className="formGrid">
-                <label>
-                  First name
+            <form
+              className="premiumEmployeeForm"
+              onSubmit={saveEmployee}
+            >
+              <div className="employeeNameFields">
+                <label className="premiumEmployeeField">
+                  <span>FIRST NAME</span>
                   <input
+                    autoComplete="given-name"
                     value={employeeFirstName}
                     onChange={e => setEmployeeFirstName(e.target.value)}
+                    placeholder="First name"
                   />
                 </label>
 
-                <label>
-                  Last name
+                <label className="premiumEmployeeField">
+                  <span>LAST NAME</span>
                   <input
+                    autoComplete="family-name"
                     value={employeeLastName}
                     onChange={e => setEmployeeLastName(e.target.value)}
+                    placeholder="Last name"
                   />
                 </label>
               </div>
 
-              <label>
-                Email
+              <label className="premiumEmployeeField">
+                <span>EMAIL</span>
                 <input
                   type="email"
+                  autoComplete="email"
                   value={employeeEmail}
                   onChange={e => setEmployeeEmail(e.target.value)}
+                  placeholder="name@company.com"
                 />
               </label>
 
-              <label>
-                Role
+              <label className="premiumEmployeeField">
+                <span>ROLE</span>
                 <input
                   value={employeeRole}
                   onChange={e => setEmployeeRole(e.target.value)}
+                  placeholder="e.g. Sales Advisor"
                 />
               </label>
 
-              <label>
-                Contracted hours per week
-                <input
-                  type="number"
-                  min="0"
-                  max="168"
-                  value={employeeHours}
-                  onChange={e => setEmployeeHours(Number(e.target.value))}
-                />
+              <label className="premiumEmployeeField">
+                <span>DEPARTMENT</span>
+                <select
+                  value={employeeDepartmentId}
+                  onChange={e => setEmployeeDepartmentId(e.target.value)}
+                >
+                  <option value="" disabled>
+                    Select department
+                  </option>
+
+                  {employeeDepartments.map(department => (
+                    <option key={department.id} value={department.id}>
+                      {department.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="premiumEmployeeField">
+                <span>CONTRACT HOURS / WEEK</span>
+                <div className="employeeHoursControl">
+                  <button
+                    type="button"
+                    aria-label="Reduce contracted hours"
+                    onClick={() =>
+                      setEmployeeHours(hours => Math.max(0, Number(hours) - 1))
+                    }
+                  >
+                    −
+                  </button>
+
+                  <div>
+                    <strong>{employeeHours}</strong>
+                    <small>hours</small>
+                  </div>
+
+                  <button
+                    type="button"
+                    aria-label="Increase contracted hours"
+                    onClick={() =>
+                      setEmployeeHours(hours => Math.min(168, Number(hours) + 1))
+                    }
+                  >
+                    +
+                  </button>
+                </div>
               </label>
 
               {employeeFormError && (
                 <div className="formError">{employeeFormError}</div>
               )}
 
-              <div className="modalActions">
+              <div className="premiumEmployeeActions">
                 {editingEmployee?.isActive ? (
                   <button
                     type="button"
-                    className="dangerButton"
+                    className="employeeDeactivateButton"
                     onClick={deactivateEmployee}
                     disabled={savingEmployee}
                   >
@@ -1511,7 +1806,7 @@ function App() {
                 ) : editingEmployee ? (
                   <button
                     type="button"
-                    className="secondaryButton"
+                    className="employeeReactivateButton"
                     onClick={reactivateEmployee}
                     disabled={savingEmployee}
                   >
@@ -1519,28 +1814,17 @@ function App() {
                   </button>
                 ) : null}
 
-                <div className="modalActionsRight">
-                  <button
-                    type="button"
-                    className="secondaryButton"
-                    onClick={closeEmployeeModal}
-                    disabled={savingEmployee}
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="submit"
-                    className="primaryButton"
-                    disabled={savingEmployee}
-                  >
-                    {savingEmployee
-                      ? 'Saving...'
-                      : editingEmployee
-                        ? 'Save changes'
-                        : 'Add employee'}
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="primaryButton premiumEmployeeSubmit"
+                  disabled={savingEmployee || !employeeDepartmentId}
+                >
+                  {savingEmployee
+                    ? 'Saving…'
+                    : editingEmployee
+                      ? 'Save changes'
+                      : 'Add employee'}
+                </button>
               </div>
             </form>
           </div>
@@ -1576,118 +1860,154 @@ function App() {
               </button>
             </div>
 
-            <form onSubmit={saveShift}>
-              <label>
-                Employee
+            <form onSubmit={saveShift} className="premiumForm">
+              <div className="formIntro">
+                <p>
+                  {editingShift
+                    ? 'Update the shift details below.'
+                    : 'Create a shift for your team.'}
+                </p>
+              </div>
 
-                <select
-                  value={employeeId}
-                  onChange={event => setEmployeeId(event.target.value)}
-                  disabled={Boolean(editingShift)}
-                >
-                  {activeEmployees.map(employee => (
-                    <option
-                      key={employee.id}
-                      value={employee.id}
-                    >
-                      {employee.firstName} {employee.lastName}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="formSection">
+                <div className="formSectionLabel">EMPLOYEE</div>
 
-              <label>
-                Date
+                <div className="premiumSelectWrap">
+                  <div className="employeeMiniAvatar">
+                    {activeEmployees.find(employee => employee.id === employeeId)?.firstName?.charAt(0)}
+                    {activeEmployees.find(employee => employee.id === employeeId)?.lastName?.charAt(0)}
+                  </div>
+
+                  <select
+                    className="premiumSelect"
+                    value={employeeId}
+                    onChange={event => setEmployeeId(event.target.value)}
+                    disabled={Boolean(editingShift)}
+                  >
+                    {activeEmployees.map(employee => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.firstName} {employee.lastName}
+                      </option>
+                    ))}
+                  </select>
+
+                  <span className="fieldChevron">›</span>
+                </div>
+              </div>
+
+              <div className="formSection">
+                <div className="formSectionLabel">DATE</div>
 
                 <input
+                  className="premiumField"
                   type="date"
                   value={shiftDate}
                   onChange={event => setShiftDate(event.target.value)}
                 />
-              </label>
-
-              <div className="formRow">
-                <label>
-                  Start
-
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={event => setStartTime(event.target.value)}
-                  />
-                </label>
-
-                <label>
-                  End
-
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={event => setEndTime(event.target.value)}
-                  />
-                </label>
               </div>
 
-              <label>
-                Break
+              <div className="formSection">
+                <div className="formSectionLabel">TIME</div>
 
-                <div className="breakInput">
-                  <input
-                    type="number"
-                    min="0"
-                    max="480"
-                    value={breakMinutes}
-                    onChange={event =>
-                      setBreakMinutes(Number(event.target.value))
-                    }
-                  />
+                <div className="timeFieldGroup">
+                  <label className="timeField">
+                    <span>START</span>
+                    <input
+                      type="time"
+                      value={startTime}
+                      onChange={event => setStartTime(event.target.value)}
+                    />
+                  </label>
 
-                  <span>minutes</span>
+                  <label className="timeField">
+                    <span>END</span>
+                    <input
+                      type="time"
+                      value={endTime}
+                      onChange={event => setEndTime(event.target.value)}
+                    />
+                  </label>
                 </div>
-              </label>
+              </div>
+
+              <div className="formSection">
+                <div className="breakHeader">
+                  <div className="formSectionLabel">BREAK</div>
+                  <button
+                    type="button"
+                    className="customBreakLink"
+                    onClick={() => {
+                      const value = window.prompt(
+                        'Custom break time in minutes',
+                        String(breakMinutes),
+                      )
+
+                      if (value === null) return
+
+                      const minutes = Number(value)
+
+                      if (
+                        Number.isFinite(minutes) &&
+                        minutes >= 0 &&
+                        minutes <= 180
+                      ) {
+                        setBreakMinutes(Math.round(minutes))
+                      }
+                    }}
+                  >
+                    Custom ›
+                  </button>
+                </div>
+
+                <div className="breakChoices">
+                  {[0, 15, 30, 45].map(minutes => (
+                    <button
+                      key={minutes}
+                      type="button"
+                      className={`breakChoice ${breakMinutes === minutes ? 'active' : ''}`}
+                      onClick={() => setBreakMinutes(minutes)}
+                    >
+                      {minutes === 0 ? 'None' : `${minutes}m`}
+                    </button>
+                  ))}
+                </div>
+
+                {![0, 15, 30, 45].includes(breakMinutes) && (
+                  <div className="customBreakValue">
+                    Custom break · {breakMinutes} minutes
+                  </div>
+                )}
+              </div>
 
               {formError && (
-                <div className="formError">
-                  {formError}
-                </div>
+                <div className="formError">{formError}</div>
               )}
 
-              <div className="modalActions">
+              <div className="premiumFormFooter">
                 {editingShift && (
                   <button
                     type="button"
-                    className="dangerButton"
+                    className="dangerButton premiumDelete"
                     onClick={deleteShift}
                     disabled={saving || deleting}
                   >
                     <Trash2 size={16} />
-                    {deleting ? 'Deleting…' : 'Delete'}
+                    {deleting ? 'Deleting…' : 'Delete shift'}
                   </button>
                 )}
 
-                <div className="modalRightActions">
-                  <button
-                    type="button"
-                    className="secondaryButton"
-                    onClick={closeModal}
-                    disabled={saving || deleting}
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="submit"
-                    className="primaryButton"
-                    disabled={saving || deleting}
-                  >
-                    <Pencil size={16} />
-                    {saving
-                      ? 'Saving…'
-                      : editingShift
-                        ? 'Save changes'
-                        : 'Create shift'}
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="primaryButton premiumSubmit"
+                  disabled={saving || deleting}
+                >
+                  <Pencil size={16} />
+                  {saving
+                    ? 'Saving…'
+                    : editingShift
+                      ? 'Save changes'
+                      : 'Create shift'}
+                </button>
               </div>
             </form>
           </div>
