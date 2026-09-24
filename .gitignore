@@ -22,3 +22,7 @@ appsettings.Local.json
 # Frontend - for later
 node_modules/
 dist/
+
+# Local development / backup files
+client/src/*.pre-cleanup
+seed-retail-demo.sql
