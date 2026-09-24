@@ -957,45 +957,151 @@ function App() {
 
           {!loading && !error && (
             <>
-              <div className="desktopRotaGrid rotaGrid">
-                <div className="gridEmployeeHeader">EMPLOYEE</div>
-
-                {days.map(day => (
-                  <div className="gridDayHeader" key={day.toISOString()}>
-                    {formatDay(day)}
-                  </div>
-                ))}
-
-                {activeEmployees.map(employee => (
-                  <div className="employeeRow" key={employee.id}>
-                    <div className="employee">
-                      <div className="avatar">
-                        {employee.firstName[0]}{employee.lastName[0]}
-                      </div>
+              <div className="desktopRotaWorkspace">
+                {selectedDepartment === 'All' ? (
+                  <div className="desktopDepartmentOverview">
+                    <div className="desktopDepartmentOverviewHeader">
                       <div>
-                        <strong>{employee.firstName} {employee.lastName}</strong>
-                        <span>{employee.role}</span>
+                        <span className="eyebrow">STORE OVERVIEW</span>
+                        <h3>Department rotas</h3>
+                        <p>
+                          Select a department to view and manage its weekly rota.
+                        </p>
+                      </div>
+
+                      <div className="desktopCoverageTotal">
+                        <strong>
+                          {departmentSummary.reduce(
+                            (total, department) =>
+                              total + department.scheduledToday,
+                            0
+                          )}
+                        </strong>
+                        <span>working today</span>
                       </div>
                     </div>
 
-                    {days.map(day => {
-                      const shift = shiftFor(employee.id, day)
-                      return (
-                        <div className="shiftCell" key={day.toISOString()}>
-                          {shift ? (
-                            <button className="shift" onClick={() => openEditShift(shift)}>
-                              <strong>{formatTime(shift.startUtc)} – {formatTime(shift.endUtc)}</strong>
-                              <span>{shift.paidHours}h paid</span>
-                              <span className="shiftHint">Click to edit</span>
-                            </button>
-                          ) : (
-                            <span className="empty">—</span>
-                          )}
-                        </div>
-                      )
-                    })}
+                    <div className="desktopDepartmentGrid">
+                      {departmentSummary.map(department => (
+                        <button
+                          type="button"
+                          className="desktopDepartmentCard"
+                          key={department.name}
+                          onClick={() =>
+                            setSelectedDepartment(department.name)
+                          }
+                        >
+                          <div className="desktopDepartmentIdentity">
+                            <div className="departmentOverviewIcon">
+                              {department.name.slice(0, 2).toUpperCase()}
+                            </div>
+
+                            <div>
+                              <strong>{department.name}</strong>
+                              <span>
+                                {department.staffCount} team members
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="desktopDepartmentMeta">
+                            <div>
+                              <strong>{department.scheduledToday}</strong>
+                              <span>working today</span>
+                            </div>
+
+                            <ChevronRight size={19} />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                ) : (
+                  <>
+                    <div className="desktopDepartmentRotaHeader">
+                      <button
+                        type="button"
+                        className="backToStoreOverview"
+                        onClick={() => setSelectedDepartment('All')}
+                      >
+                        <ChevronLeft size={15} />
+                        Store overview
+                      </button>
+
+                      <div className="desktopDepartmentRotaTitle">
+                        <div>
+                          <span className="eyebrow">
+                            {selectedDepartment.toUpperCase()}
+                          </span>
+                          <h3>{selectedDepartment} weekly rota</h3>
+                          <p>
+                            {filteredEmployees.length} team members
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="desktopRotaGrid rotaGrid">
+                      <div className="gridEmployeeHeader">EMPLOYEE</div>
+
+                      {days.map(day => (
+                        <div
+                          className="gridDayHeader"
+                          key={day.toISOString()}
+                        >
+                          {formatDay(day)}
+                        </div>
+                      ))}
+
+                      {filteredEmployees.map(employee => (
+                        <div className="employeeRow" key={employee.id}>
+                          <div className="employee">
+                            <div className="avatar">
+                              {employee.firstName[0]}
+                              {employee.lastName[0]}
+                            </div>
+
+                            <div>
+                              <strong>
+                                {employee.firstName} {employee.lastName}
+                              </strong>
+                              <span>{employee.role}</span>
+                            </div>
+                          </div>
+
+                          {days.map(day => {
+                            const shift = shiftFor(employee.id, day)
+
+                            return (
+                              <div
+                                className="shiftCell"
+                                key={day.toISOString()}
+                              >
+                                {shift ? (
+                                  <button
+                                    className="shift"
+                                    onClick={() => openEditShift(shift)}
+                                  >
+                                    <strong>
+                                      {formatTime(shift.startUtc)} –{' '}
+                                      {formatTime(shift.endUtc)}
+                                    </strong>
+                                    <span>{shift.paidHours}h paid</span>
+                                    <span className="shiftHint">
+                                      Click to edit
+                                    </span>
+                                  </button>
+                                ) : (
+                                  <span className="empty">—</span>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="mobileAgenda">

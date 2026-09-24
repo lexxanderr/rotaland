@@ -4445,3 +4445,175 @@ button.employeeListRow:hover { background: #fafbfc; }
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* RotaLand — scalable desktop department rota */
+.desktopDepartmentOverview {
+  padding: 26px;
+}
+
+.desktopDepartmentOverviewHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.desktopDepartmentOverviewHeader h3,
+.desktopDepartmentRotaTitle h3 {
+  margin: 5px 0 4px;
+  color: #101828;
+  font-size: 22px;
+}
+
+.desktopDepartmentOverviewHeader p,
+.desktopDepartmentRotaTitle p {
+  margin: 0;
+  color: #667085;
+  font-size: 14px;
+}
+
+.desktopCoverageTotal {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #f2f4f7;
+}
+
+.desktopCoverageTotal strong {
+  color: #101828;
+  font-size: 20px;
+}
+
+.desktopCoverageTotal span {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.desktopDepartmentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.desktopDepartmentCard {
+  width: 100%;
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  border: 1px solid #e4e7ec;
+  border-radius: 16px;
+  background: #fff;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+
+.desktopDepartmentCard:hover {
+  transform: translateY(-1px);
+  border-color: #cfd5df;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, .06);
+}
+
+.desktopDepartmentIdentity {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.desktopDepartmentIdentity > div:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.desktopDepartmentIdentity strong {
+  color: #101828;
+  font-size: 15px;
+}
+
+.desktopDepartmentIdentity span {
+  color: #667085;
+  font-size: 13px;
+}
+
+.desktopDepartmentMeta {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  color: #98a2b3;
+}
+
+.desktopDepartmentMeta > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.desktopDepartmentMeta strong {
+  color: #101828;
+  font-size: 17px;
+}
+
+.desktopDepartmentMeta span {
+  color: #667085;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.desktopDepartmentRotaHeader {
+  padding: 20px 22px 18px;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.desktopDepartmentRotaTitle {
+  margin-top: 14px;
+}
+
+@media (max-width: 760px) {
+  .desktopRotaWorkspace {
+    display: none !important;
+  }
+}
+
+/* RotaLand — hide legacy staffing workspace on desktop */
+@media (min-width: 761px) {
+  .mobileAgenda,
+  .mobileStaffingWorkspace {
+    display: none !important;
+  }
+}
+
+/* Desktop: mobile rota workspace must never render */
+@media screen and (min-width: 761px) {
+  main .mobileAgenda,
+  main .mobileStaffingWorkspace {
+    display: none !important;
+  }
+}
+
+/* People department list — cleaner desktop rows */
+@media (min-width: 761px) {
+  .peopleEmployeeAvatar {
+    display: none !important;
+  }
+
+  .peopleEmployeeRow {
+    padding-left: 28px !important;
+  }
+}
+
+/* Desktop department rota cards — remove abbreviation initials */
+@media (min-width: 761px) {
+  .departmentOverviewIcon {
+    display: none !important;
+  }
+}
