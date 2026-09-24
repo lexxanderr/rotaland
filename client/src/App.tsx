@@ -327,8 +327,15 @@ function App() {
   function openAddShift() {
     const defaultDate = days[selectedDayIndex]
 
+    const departmentEmployees =
+      selectedDepartment === 'All'
+        ? activeEmployees
+        : activeEmployees.filter(
+            employee => employee.departmentName === selectedDepartment
+          )
+
     setEditingShift(null)
-    setEmployeeId(activeEmployees[0]?.id ?? '')
+    setEmployeeId(departmentEmployees[0]?.id ?? '')
     setShiftDate(toApiDate(defaultDate))
     setStartTime('09:00')
     setEndTime('17:00')
@@ -1067,9 +1074,7 @@ function App() {
                               {employee.firstName} {employee.lastName}
                             </strong>
 
-                            <span>
-                              {employee.role} · {employee.departmentName}
-                            </span>
+                            <span>{employee.role}</span>
                           </div>
 
                           {shift ? (
