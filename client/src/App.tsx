@@ -15,7 +15,7 @@ import {
 import DepartmentPicker from './components/DepartmentPicker'
 import './App.css'
 
-const API = 'http://172.20.10.4:5153'
+const API = import.meta.env.VITE_API_URL || 'http://172.20.10.4:5153'
 
 type Employee = {
   id: string
