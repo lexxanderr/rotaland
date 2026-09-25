@@ -51,6 +51,7 @@ public static class CreateShiftEndpoint
             }
 
             var weekStart = RotaWeek.GetMonday(shift.StartUtc);
+            var weekEnd = weekStart.AddDays(7);
 
             var publishedRota = await db.RotaPublications
                 .AnyAsync(r =>
@@ -61,6 +62,7 @@ public static class CreateShiftEndpoint
             {
                 return Results.Conflict(new
                 {
+                    code = "ROTA_PUBLISHED",
                     message = "This rota is published. Amend it before adding shifts."
                 });
             }
@@ -73,9 +75,50 @@ public static class CreateShiftEndpoint
             {
                 return Results.Conflict(new
                 {
+                    code = "SHIFT_OVERLAP",
                     message = "Employee already has an overlapping shift."
                 });
             }
+
+            var shiftDate = DateOnly.FromDateTime(shift.StartUtc);
+
+            var approvedLeave = await db.TimeOffRequests
+                .Where(r =>
+                    r.EmployeeId == employee.Id &&
+                    r.Status == "Approved" &&
+                    r.StartDate <= shiftDate &&
+                    r.EndDate >= shiftDate)
+                .FirstOrDefaultAsync();
+
+            if (approvedLeave is not null)
+            {
+                return Results.Conflict(new
+                {
+                    code = "APPROVED_LEAVE",
+                    message = $"{employee.FirstName} {employee.LastName} has approved time off on this date.",
+                    leaveStart = approvedLeave.StartDate,
+                    leaveEnd = approvedLeave.EndDate
+                });
+            }
+
+            var weeklyShifts = existingShifts
+                .Where(s =>
+                    s.StartUtc >= weekStart &&
+                    s.StartUtc < weekEnd)
+                .ToList();
+
+            var currentlyScheduledHours =
+                schedulingService.CalculateScheduledHours(weeklyShifts);
+
+            var projectedHours =
+                currentlyScheduledHours + shift.GetPaidHours();
+
+            var contractedHours =
+                employee.ContractedHoursPerWeek;
+
+            var overHours = Math.Max(
+                0,
+                projectedHours - contractedHours);
 
             db.Shifts.Add(shift);
             await db.SaveChangesAsync();
@@ -87,7 +130,19 @@ public static class CreateShiftEndpoint
                 shift.StartUtc,
                 shift.EndUtc,
                 shift.BreakMinutes,
-                PaidHours = shift.GetPaidHours()
+                PaidHours = shift.GetPaidHours(),
+
+                scheduling = new
+                {
+                    contractedHours,
+                    previouslyScheduledHours = currentlyScheduledHours,
+                    projectedHours,
+                    overHours,
+                    isOverContract = overHours > 0,
+                    warning = overHours > 0
+                        ? $"{employee.FirstName} {employee.LastName} is now {overHours:0.##}h over contracted hours."
+                        : null
+                }
             });
         });
     }

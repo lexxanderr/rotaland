@@ -152,6 +152,10 @@ function App() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [formError, setFormError] = useState('')
+  const [toast, setToast] = useState<{
+    type: 'success' | 'warning'
+    message: string
+  } | null>(null)
 
   const [employeeId, setEmployeeId] = useState('')
   const [shiftDate, setShiftDate] = useState('')
@@ -220,6 +224,16 @@ function App() {
     }
   }, [modalOpen])
 
+  useEffect(() => {
+    if (!toast) return
+
+    const timer = window.setTimeout(() => {
+      setToast(null)
+    }, 4000)
+
+    return () => window.clearTimeout(timer)
+  }, [toast])
+
   const activeEmployees = employees.filter(e => e.isActive)
 
   const departmentNames = Array.from(
@@ -282,9 +296,12 @@ function App() {
         throw new Error('Could not load RotaLand data.')
       }
 
-      setRota(await rotaResponse.json())
+      const freshRota: WeeklyRota = await rotaResponse.json()
+      setRota(freshRota)
       setEmployees(await employeesResponse.json())
       setRequests(await requestsResponse.json())
+
+      return freshRota
     } catch (err) {
       setError(
         err instanceof Error
@@ -361,16 +378,19 @@ function App() {
   }, [weekStart])
 
   function shiftFor(employeeId: string, day: Date) {
+    const dayKey = toApiDate(day)
+
     return rota?.shifts.find(shift => {
       if (shift.employeeId !== employeeId) return false
 
       const shiftDate = new Date(shift.startUtc)
+      const shiftKey = [
+        shiftDate.getFullYear(),
+        String(shiftDate.getMonth() + 1).padStart(2, "0"),
+        String(shiftDate.getDate()).padStart(2, "0"),
+      ].join("-")
 
-  return (
-        shiftDate.getFullYear() === day.getFullYear() &&
-        shiftDate.getMonth() === day.getMonth() &&
-        shiftDate.getDate() === day.getDate()
-      )
+      return shiftKey === dayKey
     })
   }
 
@@ -478,7 +498,30 @@ function App() {
 
       setShowShiftModal(false)
       setEditingShift(null)
-      await loadData()
+
+      const freshRota = await loadData()
+
+      if (!editingShift && freshRota) {
+        const hours = freshRota.employeeHours.find(
+          summary => summary.id === employeeId,
+        )
+
+        if (hours?.isOverContract) {
+          const employee = employees.find(
+            item => item.id === employeeId,
+          )
+
+          setToast({
+            type: 'warning',
+            message: `${employee?.firstName ?? 'Employee'} ${employee?.lastName ?? ''} is now ${hours.overHours}h over contract this week.`,
+          })
+        } else {
+          setToast({
+            type: 'success',
+            message: 'Shift added successfully.',
+          })
+        }
+      }
     } catch (err) {
       setFormError(
         err instanceof Error
@@ -522,7 +565,26 @@ function App() {
 
       setShowShiftModal(false)
       setEditingShift(null)
-      await loadData()
+
+      const freshRota = await loadData()
+
+      if (!editingShift && freshRota) {
+        const hours = freshRota.employeeHours.find(
+          summary => summary.id === employeeId,
+        )
+
+        if (hours?.isOverContract) {
+          const employee = employees.find(
+            item => item.id === employeeId,
+          )
+
+          window.alert(
+            `⚠ ${employee?.firstName ?? 'Employee'} ${employee?.lastName ?? ''} is now ${hours.overHours}h over contract this week.`,
+          )
+        } else {
+          window.alert('✓ Shift added successfully.')
+        }
+      }
     } catch (err) {
       setFormError(
         err instanceof Error
@@ -2171,6 +2233,32 @@ function App() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className={`appToast ${toast.type}`} role="status">
+          <div className="appToastIcon">
+            {toast.type === 'warning' ? '!' : '✓'}
+          </div>
+
+          <div className="appToastContent">
+            <strong>
+              {toast.type === 'warning'
+                ? 'Contract hours exceeded'
+                : 'Shift created'}
+            </strong>
+            <span>{toast.message}</span>
+          </div>
+
+          <button
+            type="button"
+            className="appToastClose"
+            onClick={() => setToast(null)}
+            aria-label="Dismiss notification"
+          >
+            ×
+          </button>
         </div>
       )}
     </div>
