@@ -13,13 +13,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins(
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:5175",
-                "http://172.20.10.4:5175",
-                "https://rotaland.vercel.app"
-            )
+            .SetIsOriginAllowed(origin =>
+                origin == "https://rotaland.vercel.app" ||
+                origin.StartsWith("http://localhost:") ||
+                origin.StartsWith("http://172.20.10.4:"))
             .AllowAnyHeader()
             .AllowAnyMethod();
     });

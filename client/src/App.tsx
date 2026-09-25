@@ -39,6 +39,19 @@ type Shift = {
   paidHours: number
 }
 
+type EmployeeHoursSummary = {
+  id: string
+  employeeName: string
+  departmentId: string
+  departmentName: string
+  contractedHours: number
+  scheduledHours: number
+  remainingHours: number
+  overHours: number
+  utilisationPercent: number
+  isOverContract: boolean
+}
+
 type WeeklyRota = {
   weekStart: string
   weekEnd: string
@@ -48,6 +61,7 @@ type WeeklyRota = {
   publishedAtUtc: string | null
   lastUpdatedAtUtc: string | null
   totalScheduledHours: number
+  employeeHours: EmployeeHoursSummary[]
   shifts: Shift[]
 }
 
@@ -1493,9 +1507,49 @@ function App() {
                             </strong>
                             <span>{employee.role}</span>
                             <small>
-                              {employee.contractedHoursPerWeek}h / week
-                              <span className="peopleActiveDot">•</span>
-                              Active
+                              {(() => {
+                                const hours = rota?.employeeHours?.find(
+                                  item => item.id === employee.id,
+                                )
+
+                                if (!hours) {
+                                  return (
+                                    <>
+                                      {employee.contractedHoursPerWeek}h contract
+                                      <span className="peopleActiveDot">•</span>
+                                      Active
+                                    </>
+                                  )
+                                }
+
+                                return (
+                                  <>
+                                    {hours.isOverContract ? (
+                                      <>
+                                        <span className="hoursContext">
+                                          {hours.contractedHours}h contract
+                                          <span className="peopleActiveDot">•</span>
+                                          {hours.scheduledHours}h scheduled
+                                        </span>
+                                        <span className="overContractWarning">
+                                          <span className="overContractLabel">⚠ OVER CONTRACT</span>
+                                          <strong>+{hours.overHours}h</strong>
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        {hours.contractedHours}h contract
+                                        <span className="peopleActiveDot">•</span>
+                                        {hours.scheduledHours}h scheduled
+                                        <span className="peopleActiveDot">•</span>
+                                        <span className="hoursRemaining">
+                                          {hours.remainingHours}h remaining
+                                        </span>
+                                      </>
+                                    )}
+                                  </>
+                                )
+                              })()}
                             </small>
                           </div>
 

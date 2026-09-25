@@ -10,7 +10,8 @@ public static class GetWeeklyRotaEndpoint
     {
         app.MapGet("/api/rota/week", async (
             DateTime start,
-            RotaLandDbContext db) =>
+            RotaLandDbContext db,
+            SchedulingService schedulingService) =>
         {
             var weekStart = RotaWeek.GetMonday(start);
             var end = weekStart.AddDays(7);
@@ -18,6 +19,14 @@ public static class GetWeeklyRotaEndpoint
             var publication = await db.RotaPublications
                 .AsNoTracking()
                 .SingleOrDefaultAsync(r => r.WeekStartUtc == weekStart);
+
+            var employees = await db.Employees
+                .AsNoTracking()
+                .Include(e => e.Department)
+                .Where(e => e.IsActive)
+                .OrderBy(e => e.FirstName)
+                .ThenBy(e => e.LastName)
+                .ToListAsync();
 
             var shifts = await db.Shifts
                 .AsNoTracking()
@@ -37,6 +46,28 @@ public static class GetWeeklyRotaEndpoint
                 PaidHours = s.GetPaidHours()
             }).ToList();
 
+            var employeeHours = employees.Select(employee =>
+            {
+                var employeeShifts = shifts.Where(s => s.EmployeeId == employee.Id);
+                var summary = schedulingService.CalculateHoursSummary(
+                    employee.ContractedHoursPerWeek,
+                    employeeShifts);
+
+                return new
+                {
+                    employee.Id,
+                    EmployeeName = $"{employee.FirstName} {employee.LastName}",
+                    employee.DepartmentId,
+                    DepartmentName = employee.Department.Name,
+                    summary.ContractedHours,
+                    summary.ScheduledHours,
+                    summary.RemainingHours,
+                    summary.OverHours,
+                    summary.UtilisationPercent,
+                    summary.IsOverContract
+                };
+            }).ToList();
+
             return Results.Ok(new
             {
                 WeekStart = weekStart,
@@ -49,6 +80,7 @@ public static class GetWeeklyRotaEndpoint
                 PublishedAtUtc = publication?.PublishedAtUtc,
                 LastUpdatedAtUtc = publication?.LastUpdatedAtUtc,
                 TotalScheduledHours = shifts.Sum(s => s.GetPaidHours()),
+                EmployeeHours = employeeHours,
                 Shifts = shiftResults
             });
         });
